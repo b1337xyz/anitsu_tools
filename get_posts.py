@@ -27,7 +27,7 @@ PASS = ''
 HOME = os.getenv('HOME')
 DB = os.path.join(HOME, '.cache/anitsu.json')
 API_URL =  'https://anitsu.moe/wp-json/wp/v2/posts'
-API_URL += '?per_page={}&page={}&orderby={}&order={}'
+API_URL += '?per_page={}&page={}&orderby={}&order={}&_fields=id,date,modified,link,title,content'
 RE_IMG  = re.compile(r'src=\"([^\"]*\.(?:png|jpe?g|webp|gif))')
 RE_MAL  = re.compile(r'myanimelist\.net/\w*/(\d*)')
 RE_ANI  = re.compile(r'anilist\.co/\w*/(\d*)')
@@ -65,9 +65,9 @@ async def update_db(posts):
             db[post_id]['nextcloud'] = dict()
 
         if 'modified' in db[post_id]:
-            new_modified = db[post_id]['modified']
-            if modified != new_modified:
-                print(f'[\033[1;31m{modified}\033[m > \033[1;32m{new_modified}\033[m] {title}')
+            mod = db[post_id]['modified']
+            if modified != mod:
+                print(f'[\033[1;31m{mod}\033[m > \033[1;32m{modified}\033[m] {title}')
                 db[post_id]['nextcloud'] = dict()
 
         pw = RE_PASS.search(content)

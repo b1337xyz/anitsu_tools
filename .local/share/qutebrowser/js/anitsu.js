@@ -1,3 +1,4 @@
+// save anitsu bookmarks
 function download(content, fileName, contentType) {
     var a = document.createElement("a");
     var file = new Blob([content], {type: contentType});

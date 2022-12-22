@@ -1,3 +1,3 @@
 # anitsu_tools
 
-![anitsu-cli.demo.gif]
+!(gif)[anitsu-cli.demo.gif]

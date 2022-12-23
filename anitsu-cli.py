@@ -154,7 +154,7 @@ def preview_fifo():
             if not output:
                 output = []
 
-        output = ([' '] * 22) + output
+        output = ([' '] * 24) + output
         with open(PREVIEW_FIFO, 'w') as fp:
             fp.write('\n'.join(output[:80]))
 

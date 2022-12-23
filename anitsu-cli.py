@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 from sys import argv, stdout
-from threading import Thread
-import subprocess as sp
-import signal
-import sys
 import os
 import re
-import json
+
+if len(argv) == 1:
+    from threading import Thread
+    import subprocess as sp
+    import signal
+    import sys
+    import json
 
 SCRIPT = os.path.realpath(__file__)
 HOME = os.getenv('HOME')

@@ -50,12 +50,12 @@ def fzf(args):
         open(FZF_PID, 'w').write(str(proc.pid))
         out = proc.communicate('\n'.join(args))
     finally:
-        open(FIFO, 'w').write('')
-        open(UB_FIFO, 'w').write('')
-        open(PREVIEW_FIFO, 'w').write('')
+        cleanup()
 
 
-def kill_fzf():
+def cleanup():
+    """ Make sure that every FIFO dies and temporary files are deleted """
+
     if os.path.exists(FZF_PID):
         try:
             with open(FZF_PID, 'r') as fp:
@@ -65,8 +65,29 @@ def kill_fzf():
         except Exception as err:
             pass
 
+    try:
+        for i in [FIFO, UB_FIFO, PREVIEW_FIFO]:
+            if os.path.exists(i):
+                f = open(i, 'w')
+                f.flush()
+    except Exception as err:
+        print(err)
+
+    sleep(3)
+
+    for i in threads:
+        if i.is_alive():
+            print(i.name)
+
+    for i in [FIFO, PREVIEW_FIFO, FZF_PID, UB_FIFO]:
+        if os.path.exists(i):
+            os.remove(i)
+
+    # os.kill(os.getpid(), signal.SIGTERM)
+
 
 def reload(args):
+    """ Receive a key from the FIFO and output it's items to fzf """
     with open(FIFO, 'w') as fifo:
         fifo.write('\n'.join(args))
 
@@ -160,7 +181,7 @@ def preview_fifo():
 
 
 def main():
-    global db
+    global db, threads
 
     threads = list()
     with open(DB, 'r') as fp:
@@ -216,8 +237,6 @@ def main():
         with open(FIFO, 'w') as fifo:
             fifo.write('\n'.join(output))
 
-    kill_fzf()
-
     if files:
         with open(DL_FILE, 'w') as fp:
             fp.write('\n'.join(url for url in files))
@@ -229,6 +248,7 @@ def main():
             ])
         except KeyboardInterrupt:
             pass
+            # os.system('clear')
         finally:
             os.remove(DL_FILE)
 
@@ -238,11 +258,7 @@ if __name__ == '__main__':
         try:
             main()
         finally:
-            kill_fzf()
-            for i in [FIFO, PREVIEW_FIFO, FZF_PID, UB_FIFO]:
-                if os.path.exists(i):
-                    os.remove(i)
-            # os.kill(os.getpid(), signal.SIGTERM)
+            cleanup()
     elif 'preview' == argv[1]:
         preview(argv[2])
     elif 'reload'  == argv[1]:

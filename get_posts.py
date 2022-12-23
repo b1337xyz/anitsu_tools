@@ -26,6 +26,7 @@ USER = '' # anitsu login user and password
 PASS = ''
 HOME = os.getenv('HOME')
 DB = os.path.join(HOME, '.cache/anitsu.json')
+IMG_DIR = os.path.join(HOME, '.cache/anitsu_covers')
 API_URL =  'https://anitsu.moe/wp-json/wp/v2/posts'
 API_URL += '?per_page={}&page={}&orderby={}&order={}&_fields=id,date,modified,link,title,content'
 RE_IMG  = re.compile(r'src=\"([^\"]*\.(?:png|jpe?g|webp|gif))')
@@ -82,7 +83,8 @@ async def update_db(posts):
         db[post_id]['date']       = post['date']
         db[post_id]['modified']   = modified
         db[post_id]['is_release'] = '[em lançamento' in content.lower()
-        db[post_id]['image']      = regex(RE_IMG, content)
+        db[post_id]['image']      = os.path.join(IMG_DIR, f'{post_id}.jpg')
+        db[post_id]['image_url']  = regex(RE_IMG, content)
         db[post_id]['malid']      = regex(RE_MAL, content)
         db[post_id]['anilist']    = regex(RE_ANI, content)
         db[post_id]['gdrive']     = regex(RE_GDR, content)

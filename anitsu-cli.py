@@ -42,9 +42,6 @@ def fzf(args):
     for fifo in [FIFO, PREVIEW_FIFO]:
         open(fifo, 'w').write('')
 
-    if proc.returncode != 0:
-        sys.exit(proc.returncode)
-
 
 def preview_fifo():
     def rec(q, data):
@@ -110,7 +107,7 @@ def main():
             data = [i.strip() for i in data.split('\n') if i]
 
         if len(data) == 0 or 'die' in data:
-            sys.exit(0)
+            return
 
         files = list()
         for k in data:

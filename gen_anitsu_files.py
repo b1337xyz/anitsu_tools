@@ -11,7 +11,7 @@ OUTPUT = os.path.join(HOME, '.local/share/anitsu_files.json')
 with open(DB, 'r') as fp:
     db = json.load(fp)
 
-files = {'files': dict()}
+files = dict()
 for k, v in db.items():
     title = db[k]['title']
     c = 1

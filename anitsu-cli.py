@@ -12,10 +12,9 @@ DL_DIR = os.path.join(HOME, 'Downloads')
 DB = os.path.join(HOME, '.local/share/anitsu_files.json')
 PREVIEW_SCRIPT = os.path.join(ROOT, 'preview.py')
 RELOAD_SCRIPT = os.path.join(ROOT, 'reload.py')
-PREVIEW_FIFO = '/tmp/anitsu.preview.fifo'
 DL_FILE = '/tmp/anitsu'
+PREVIEW_FIFO = '/tmp/anitsu.preview.fifo'
 FIFO = '/tmp/anitsu.fifo'
-FZF_FIFO = '/tmp/anitsu.fzf.fifo'
 FZF_PID = '/tmp/anitsu.fzf.pid'
 
 FZF_ARGS = [
@@ -89,7 +88,6 @@ def main():
     with open(DB, 'r') as fp:
         db = json.load(fp)
 
-    os.mkfifo(FZF_FIFO)
     os.mkfifo(PREVIEW_FIFO)
     os.mkfifo(FIFO)
 
@@ -102,16 +100,16 @@ def main():
     t.start()
     threads.append(t)
 
-    old_db = []
+    files = list()
+    old_db = list()
     while os.path.exists(FIFO):
         with open(FIFO, 'r') as fifo:
             data = fifo.read()
             data = [i.strip() for i in data.split('\n') if i]
 
         if len(data) == 0 or 'die' in data:
-            return
+            break
 
-        files = list()
         for k in data:
             if k == '..':
                 db = old_db[-1].copy()
@@ -137,32 +135,27 @@ def main():
     with open(FZF_PID, 'r') as fp:
         pid = int(fp.read().strip())
         os.kill(pid, signal.SIGTERM)
+        os.remove(FZF_PID)
 
     for fifo in [FIFO, PREVIEW_FIFO]:
         open(fifo, 'w').write('')
+        os.remove(fifo)
 
-    with open(DL_FILE, 'w') as fp:
-        fp.write('\n'.join(url for url in files))
+    if files:
+        with open(DL_FILE, 'w') as fp:
+            fp.write('\n'.join(url for url in files))
 
-    try:
-        p = sp.run([
-            'aria2c', '-j', '2',
-            '--dir', DL_DIR, f'--input-file={DL_FILE}'
-        ])
-    except KeyboardInterrupt:
-        pass
+        try:
+            p = sp.run([
+                'aria2c', '-j', '2',
+                '--dir', DL_DIR, f'--input-file={DL_FILE}'
+            ])
+        except KeyboardInterrupt:
+            pass
+        finally:
+            os.remove(DL_FILE)
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    finally:
-        # for i in threads:
-        #     if i.is_alive():
-        #         print(i.name, 'alive')
-        #     else:
-        #         print(i.name, 'dead')
+    main()
 
-        for i in [DL_FILE, FIFO, PREVIEW_FIFO, FZF_FIFO, FZF_PID]:
-            if os.path.exists(i):
-                os.remove(i)

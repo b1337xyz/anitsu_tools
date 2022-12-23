@@ -3,7 +3,6 @@ from urllib.parse import unquote
 from optparse import OptionParser
 from tempfile import mktemp
 from threading import Thread
-import traceback
 import subprocess as sp
 import json
 import os
@@ -21,8 +20,7 @@ FIFO = '/tmp/anitsu.fifo'
 FZF_ARGS = [
     '-m',
     '--preview', f'{PREVIEW_SCRIPT} {{}}',
-    '--bind', 'ctrl-a:select-all',
-    '--bind', 'ctrl-d:deselect-all',
+    '--bind', 'ctrl-a:toggle-all+first+toggle',
     '--bind', 'ctrl-g:first',
     '--bind', 'ctrl-l:last'
 ]
@@ -145,11 +143,11 @@ else:
     except Exception as err:
         pass
     finally:
+        if os.path.exists(tmpfile):
+            os.remove(tmpfile)
+
         if os.path.exists(FIFO):
             with open(FIFO, 'w') as fp:
                 fp.write('')
             t.join()
             os.remove(FIFO)
-
-        if os.path.exists(tmpfile):
-            os.remove(tmpfile)

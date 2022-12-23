@@ -26,6 +26,7 @@ PREVIEW_FIFO = '/tmp/anitsu.preview.fifo'
 FIFO = '/tmp/anitsu.fifo'
 FZF_PID = '/tmp/anitsu.fzf.pid'
 UB_FIFO = '/tmp/anitsu.ueberzug'
+PID = os.getpid()
 
 FZF_ARGS = [
     '-m',
@@ -40,17 +41,14 @@ FZF_ARGS = [
 
 
 def fzf(args):
-    try:
-        proc = sp.Popen(
-           ["fzf"] + FZF_ARGS,
-           stdin=sp.PIPE,
-           stdout=sp.PIPE,
-           universal_newlines=True
-        )
-        open(FZF_PID, 'w').write(str(proc.pid))
-        out = proc.communicate('\n'.join(args))
-    finally:
-        cleanup()
+    proc = sp.Popen(
+       ["fzf"] + FZF_ARGS,
+       stdin=sp.PIPE,
+       stdout=sp.PIPE,
+       universal_newlines=True
+    )
+    open(FZF_PID, 'w').write(str(proc.pid))
+    out = proc.communicate('\n'.join(args))
 
 
 def cleanup():
@@ -70,20 +68,22 @@ def cleanup():
             if os.path.exists(i):
                 f = open(i, 'w')
                 f.flush()
+                # f.close()
+    except KeyboardInterrupt:
+        pass
     except Exception as err:
-        print(err)
+        pass
 
-    sleep(3)
-
-    for i in threads:
-        if i.is_alive():
-            print(i.name)
+    # for i in threads:
+    #     if i.is_alive():
+    #         print(i.name)
 
     for i in [FIFO, PREVIEW_FIFO, FZF_PID, UB_FIFO]:
         if os.path.exists(i):
             os.remove(i)
 
-    # os.kill(os.getpid(), signal.SIGTERM)
+    # kill it self
+    # os.kill(PID, signal.SIGTERM)
 
 
 def reload(args):
@@ -237,6 +237,8 @@ def main():
         with open(FIFO, 'w') as fifo:
             fifo.write('\n'.join(output))
 
+    cleanup()
+
     if files:
         with open(DL_FILE, 'w') as fp:
             fp.write('\n'.join(url for url in files))
@@ -256,6 +258,7 @@ def main():
 if __name__ == '__main__':
     if len(argv) == 1:
         try:
+            cleanup()
             main()
         finally:
             cleanup()

@@ -14,11 +14,12 @@ with open(DB, 'r') as fp:
 files = dict()
 for k, v in db.items():
     title = db[k]['title']
-    c = 1
-    s = title
-    while s in files:
-        s = f'{title}.{c}'
-        c += 1
+    s = f'{title} ({k})'
+    # c = 1
+    # s = title
+    # while s in files:
+    #     s = f'{title}.{c}'
+    #     c += 1
     files[s] = dict()
     for v2 in v['nextcloud'].values():
         files[s].update(v2)

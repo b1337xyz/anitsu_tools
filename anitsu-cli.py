@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+try:
+    import ueberzug.lib.v0 as ueberzug
+    has_ueberzug = True
+except ImportError:
+    has_ueberzug = False
+
 from sys import argv, stdout
 from threading import Thread
 import json
@@ -10,6 +16,7 @@ import sys
 
 SCRIPT = os.path.realpath(__file__)
 HOME = os.getenv('HOME')
+IMG_DIR = os.path.join(HOME, '.cache/anitsu_covers')
 ROOT = os.path.dirname(os.path.realpath(__file__))
 DL_DIR = os.path.join(HOME, 'Downloads')
 DB = os.path.join(HOME, '.local/share/anitsu_files.json')
@@ -71,6 +78,16 @@ def preview(arg):
     with open(PREVIEW_FIFO, 'w') as fifo:
         fifo.write(f'{arg}\n')
 
+    post_id = arg.split('(')[-1][:-1]
+    img = os.path.join(IMG_DIR, f'{post_id}.jpg')
+    if os.path.exists(img) and has_ueberzug:
+        with ueberzug.Canvas() as c:
+            ub = c.create_placement('preview', x=0, y=0, scaler=ueberzug.ScalerOption.COVER.value)
+            ub.path = img
+            ub.visibility = ueberzug.Visibility.VISIBLE
+    else:
+        stdout.write(f'{img} not found - 404\n')
+
     with open(PREVIEW_FIFO, 'r') as fifo:
         data = fifo.read()
         for i in [i.strip() for i in data.split('\n') if i]:
@@ -78,6 +95,7 @@ def preview(arg):
                 stdout.write(f'\033[1;35m{i}\033[m\n')
             else:
                 stdout.write(f'\033[1;34m{i}\033[m\n')
+
 
 
 def preview_fifo():
@@ -116,9 +134,10 @@ def preview_fifo():
             if not output:
                 output = []
 
+        output = ([' '] * 15) + output
+
         with open(PREVIEW_FIFO, 'w') as fp:
-            for i in output[:100]:
-                fp.write(i + '\n')
+            fp.write('\n'.join(output[:30]))
 
 
 def main():

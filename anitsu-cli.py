@@ -17,7 +17,6 @@ DL_FILE = '/tmp/anitsu'
 PREVIEW_FIFO = '/tmp/anitsu.preview.fifo'
 FIFO = '/tmp/anitsu.fifo'
 FZF_PID = '/tmp/anitsu.fzf.pid'
-RE_EXT = re.compile(r'.*\.(mkv|avi|mp4|webm|ogg|mov|rmvb|mpg|mpeg)$')
 
 FZF_ARGS = [
     '-m',
@@ -68,6 +67,7 @@ def reload(args):
 
 
 def preview(arg):
+    RE_EXT = re.compile(r'.*\.(mkv|avi|mp4|webm|ogg|mov|rmvb|mpg|mpeg)$')
     with open(PREVIEW_FIFO, 'w') as fifo:
         fifo.write(f'{arg}\n')
 

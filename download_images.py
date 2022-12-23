@@ -8,7 +8,8 @@ import subprocess as sp
 
 HOME = os.getenv('HOME')
 DB = os.path.join(HOME, '.cache/anitsu.json')
-Q_SIZE = 10
+Q_SIZE = 15
+
 
 async def download(queue):
     while True:
@@ -27,10 +28,10 @@ async def download(queue):
                 p = sp.run(['file', '-bi', image_path], stdout=sp.PIPE)
                 out = p.stdout.decode().strip()
                 if out.startswith('image/gif'):
-                    print(f'converting {out} to jpg...')
+                    print(f'converting {out} to jpeg...')
                     sp.run(['convert', f'{image_path}[0]', image_path])
                 elif not out.startswith('image/jpeg'):
-                    print(f'converting {out} to jpg...')
+                    print(f'converting {out} to jpeg...')
                     sp.run(['convert', image_path, image_path])
             except:
                 os.remove(image_path)

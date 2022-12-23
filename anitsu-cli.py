@@ -1,28 +1,30 @@
 #!/usr/bin/env python3
+from sys import argv, stdout
 from threading import Thread
 import subprocess as sp
 import signal
 import sys
 import os
+import re
 import json
 
+SCRIPT = os.path.realpath(__file__)
 HOME = os.getenv('HOME')
 ROOT = os.path.dirname(os.path.realpath(__file__))
 DL_DIR = os.path.join(HOME, 'Downloads')
 DB = os.path.join(HOME, '.local/share/anitsu_files.json')
-PREVIEW_SCRIPT = os.path.join(ROOT, 'preview.py')
-RELOAD_SCRIPT = os.path.join(ROOT, 'reload.py')
 DL_FILE = '/tmp/anitsu'
 PREVIEW_FIFO = '/tmp/anitsu.preview.fifo'
 FIFO = '/tmp/anitsu.fifo'
 FZF_PID = '/tmp/anitsu.fzf.pid'
+RE_EXT = re.compile(r'.*\.(mkv|avi|mp4|webm|ogg|mov|rmvb|mpg|mpeg)$')
 
 FZF_ARGS = [
     '-m',
     '--border', 'none',
     '--preview-window', 'right:52%:border-none',
-    '--bind', f'enter:reload(python3 {RELOAD_SCRIPT} {{+}})',
-    '--preview', f'{PREVIEW_SCRIPT} {{}}',
+    '--bind', f'enter:reload(python3 {SCRIPT} reload {{+}})',
+    '--preview', f'python3 {SCRIPT} preview {{}}',
     '--bind', 'ctrl-a:toggle-all+last+toggle+first',
     '--bind', 'ctrl-g:first',
     '--bind', 'ctrl-l:last'
@@ -30,14 +32,52 @@ FZF_ARGS = [
 
 
 def fzf(args):
-    proc = sp.Popen(
-       ["fzf"] + FZF_ARGS,
-       stdin=sp.PIPE,
-       stdout=sp.PIPE,
-       universal_newlines=True
-    )
-    open(FZF_PID, 'w').write(str(proc.pid))
-    out = proc.communicate('\n'.join(args))
+    try:
+        proc = sp.Popen(
+           ["fzf"] + FZF_ARGS,
+           stdin=sp.PIPE,
+           stdout=sp.PIPE,
+           universal_newlines=True
+        )
+        open(FZF_PID, 'w').write(str(proc.pid))
+        out = proc.communicate('\n'.join(args))
+    finally:
+        open(FIFO, 'w').write('')
+        open(PREVIEW_FIFO, 'w').write('')
+
+
+def kill_fzf():
+    if os.path.exists(FZF_PID):
+        try:
+            with open(FZF_PID, 'r') as fp:
+                pid = int(fp.read().strip())
+            os.kill(pid, signal.SIGTERM)
+            os.remove(FZF_PID)
+        except Exception as err:
+            pass
+
+
+def reload(args):
+    with open(FIFO, 'w') as fifo:
+        fifo.write('\n'.join(args))
+
+    with open(FIFO, 'r') as fifo:
+        data = fifo.read()
+        for i in [i.strip() for i in data.split('\n') if i]:
+            stdout.write(f'{i}\n')
+
+
+def preview(arg):
+    with open(PREVIEW_FIFO, 'w') as fifo:
+        fifo.write(f'{arg}\n')
+
+    with open(PREVIEW_FIFO, 'r') as fifo:
+        data = fifo.read()
+        for i in [i.strip() for i in data.split('\n') if i]:
+            if RE_EXT.match(i):
+                stdout.write(f'\033[1;35m{i}\033[m\n')
+            else:
+                stdout.write(f'\033[1;34m{i}\033[m\n')
 
 
 def preview_fifo():
@@ -82,7 +122,7 @@ def preview_fifo():
 
 
 def main():
-    global db, threads
+    global db
 
     threads = list()
     with open(DB, 'r') as fp:
@@ -132,14 +172,7 @@ def main():
         with open(FIFO, 'w') as fifo:
             fifo.write('\n'.join(output))
 
-    with open(FZF_PID, 'r') as fp:
-        pid = int(fp.read().strip())
-        os.kill(pid, signal.SIGTERM)
-        os.remove(FZF_PID)
-
-    for fifo in [FIFO, PREVIEW_FIFO]:
-        open(fifo, 'w').write('')
-        os.remove(fifo)
+    kill_fzf()
 
     if files:
         with open(DL_FILE, 'w') as fp:
@@ -157,5 +190,16 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
-
+    if len(argv) == 1:
+        try:
+            main()
+        finally:
+            kill_fzf()
+            for i in [FIFO, PREVIEW_FIFO, FZF_PID]:
+                if os.path.exists(i):
+                    os.remove(i)
+            # os.kill(os.getpid(), signal.SIGTERM)
+    elif 'preview' == argv[1]:
+        preview(argv[2])
+    elif 'reload'  == argv[1]:
+        reload(argv[2:])

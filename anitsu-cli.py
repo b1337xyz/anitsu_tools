@@ -139,10 +139,13 @@ def main():
     with open(DL_FILE, 'w') as fp:
         fp.write('\n'.join(url for url in files))
 
-    sp.run([
-        'aria2c', '-j', '2',
-        '--dir', DL_DIR, f'--input-file={DL_FILE}'
-    ])
+    try:
+        sp.run([
+            'aria2c', '-j', '2',
+            '--dir', DL_DIR, f'--input-file={DL_FILE}'
+        ])
+    except KeyboardInterrupt:
+        pass
 
 
 if __name__ == '__main__':

@@ -16,6 +16,7 @@ PREVIEW_FIFO = '/tmp/anitsu.preview.fifo'
 FIFO = '/tmp/anitsu.fifo'
 FZF_FIFO = '/tmp/anitsu.fzf.fifo'
 DL_FILE = '/tmp/anitsu'
+FZF_PID = '/tmp/anitsu.fzf.pid'
 
 FZF_ARGS = [
     '-m',
@@ -26,6 +27,7 @@ FZF_ARGS = [
     '--bind', 'ctrl-l:last'
 ]
 
+
 def fzf(args):
     proc = sp.Popen(
        ["fzf"] + FZF_ARGS,
@@ -33,15 +35,11 @@ def fzf(args):
        stdout=sp.PIPE,
        universal_newlines=True
     )
+    open(FZF_PID, 'w').write(str(proc.pid))
     out = proc.communicate('\n'.join(args))
-    try:
-        with open(FIFO, 'w') as fp:
-            fp.write('')
 
-        with open(PREVIEW_FIFO, 'w') as fp:
-            fp.write('')
-    except:
-        pass
+    for fifo in [FIFO, PREVIEW_FIFO]:
+        open(fifo, 'w').write('')
 
     if proc.returncode != 0:
         sys.exit(proc.returncode)
@@ -112,7 +110,7 @@ def main():
             data = [i.strip() for i in data.split('\n') if i]
 
         if len(data) == 0 or 'die' in data:
-            sys.exit(1)
+            sys.exit(0)
 
         files = list()
         for k in data:
@@ -134,11 +132,11 @@ def main():
             output = [k for k in db]
         output += ['..'] if old_db else []
 
-        if output:
-            with open(FIFO, 'w') as fifo:
-                fifo.write('\n'.join(output))
+        with open(FIFO, 'w') as fifo:
+            fifo.write('\n'.join(output))
 
-    sp.run(['pkill', '-x', 'fzf'])
+    with open(FZF_PID, 'r') as fp:
+        os.kill(fp.read().strip())
 
     with open(DL_FILE, 'w') as fp:
         fp.write('\n'.join(url for url in files))

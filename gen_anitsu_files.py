@@ -14,7 +14,7 @@ with open(DB, 'r') as fp:
 files = dict()
 for k, v in db.items():
     title = db[k]['title']
-    s = f'{title} ({k})'
+    s = f'{title} (post-{k})'
     # c = 1
     # s = title
     # while s in files:

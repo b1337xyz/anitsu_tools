@@ -7,6 +7,7 @@ except ImportError:
 
 from sys import argv, stdout
 from threading import Thread
+from time import sleep
 import json
 import os
 import re
@@ -24,11 +25,12 @@ DL_FILE = '/tmp/anitsu'
 PREVIEW_FIFO = '/tmp/anitsu.preview.fifo'
 FIFO = '/tmp/anitsu.fifo'
 FZF_PID = '/tmp/anitsu.fzf.pid'
+UB_LOCK = '/tmp/anitsu.ueberzug'
 
 FZF_ARGS = [
     '-m',
     '--border', 'none',
-    '--preview-window', 'right:52%:border-none',
+    '--preview-window', 'left:52%:border-none',
     '--bind', f'enter:reload(python3 {SCRIPT} reload {{+}})',
     '--preview', f'python3 {SCRIPT} preview {{}}',
     '--bind', 'ctrl-a:toggle-all+last+toggle+first',
@@ -49,6 +51,7 @@ def fzf(args):
         out = proc.communicate('\n'.join(args))
     finally:
         open(FIFO, 'w').write('')
+        open(UB_LOCK, 'w').write('')
         open(PREVIEW_FIFO, 'w').write('')
 
 
@@ -74,28 +77,42 @@ def reload(args):
 
 
 def preview(arg):
+    if os.path.exists(UB_LOCK):
+        os.remove(UB_LOCK)
+
     RE_EXT = re.compile(r'.*\.(mkv|avi|mp4|webm|ogg|mov|rmvb|mpg|mpeg)$')
     with open(PREVIEW_FIFO, 'w') as fifo:
         fifo.write(f'{arg}\n')
 
-    post_id = arg.split('(')[-1][:-1]
-    img = os.path.join(IMG_DIR, f'{post_id}.jpg')
-    if os.path.exists(img) and has_ueberzug:
-        with ueberzug.Canvas() as c:
-            ub = c.create_placement('preview', x=0, y=0, scaler=ueberzug.ScalerOption.COVER.value)
-            ub.path = img
-            ub.visibility = ueberzug.Visibility.VISIBLE
-    else:
-        stdout.write(f'{img} not found - 404\n')
-
     with open(PREVIEW_FIFO, 'r') as fifo:
         data = fifo.read()
-        for i in [i.strip() for i in data.split('\n') if i]:
-            if RE_EXT.match(i):
-                stdout.write(f'\033[1;35m{i}\033[m\n')
-            else:
-                stdout.write(f'\033[1;34m{i}\033[m\n')
 
+    try:
+        post_id = re.search(r' \(post-(\d+)\)$', arg).group(1)
+        img = os.path.join(IMG_DIR, f'{post_id}.jpg')
+    except AttributeError:
+        img = ''
+
+    for i in [i.strip() for i in data.split('\n') if i]:
+        if not img and len(i) < 3:
+            continue
+        if RE_EXT.match(i):
+            stdout.write(f'\033[1;35m{i}\033[m\n')
+        else:
+            stdout.write(f'\033[1;34m{i}\033[m\n')
+
+    if os.path.exists(img) and has_ueberzug:
+        stdout.flush()
+        open(UB_LOCK, 'w').write(img)
+        with ueberzug.Canvas() as canvas:
+            pv = canvas.create_placement(
+                'pv', x=0, y=0, width=32, height=20,
+                scaler=ueberzug.ScalerOption.DISTORT.value
+            )
+            pv.path = img
+            pv.visibility = ueberzug.Visibility.VISIBLE
+            while os.path.exists(UB_LOCK):
+                sleep(0.2)
 
 
 def preview_fifo():
@@ -134,7 +151,7 @@ def preview_fifo():
             if not output:
                 output = []
 
-        output = ([' '] * 15) + output
+        output = ([' '] * 22) + output
 
         with open(PREVIEW_FIFO, 'w') as fp:
             fp.write('\n'.join(output[:30]))
@@ -214,7 +231,7 @@ if __name__ == '__main__':
             main()
         finally:
             kill_fzf()
-            for i in [FIFO, PREVIEW_FIFO, FZF_PID]:
+            for i in [FIFO, PREVIEW_FIFO, FZF_PID, UB_LOCK]:
                 if os.path.exists(i):
                     os.remove(i)
             # os.kill(os.getpid(), signal.SIGTERM)

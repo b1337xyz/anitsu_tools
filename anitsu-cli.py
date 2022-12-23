@@ -40,9 +40,6 @@ def fzf(args):
     open(FZF_PID, 'w').write(str(proc.pid))
     out = proc.communicate('\n'.join(args))
 
-    for fifo in [FIFO, PREVIEW_FIFO]:
-        open(fifo, 'w').write('')
-
 
 def preview_fifo():
     def rec(q, data):
@@ -86,7 +83,9 @@ def preview_fifo():
 
 
 def main():
-    global db
+    global db, threads
+
+    threads = list()
     with open(DB, 'r') as fp:
         db = json.load(fp)
 
@@ -96,10 +95,12 @@ def main():
 
     t = Thread(target=preview_fifo)
     t.start()
+    threads.append(t)
 
     keys = list(db.keys())
     t = Thread(target=fzf, args=(keys,))
     t.start()
+    threads.append(t)
 
     old_db = []
     while os.path.exists(FIFO):
@@ -134,13 +135,17 @@ def main():
             fifo.write('\n'.join(output))
 
     with open(FZF_PID, 'r') as fp:
-        os.kill(int(fp.read().strip()), signal.SIGTERM)
+        pid = int(fp.read().strip())
+        os.kill(pid, signal.SIGTERM)
+
+    for fifo in [FIFO, PREVIEW_FIFO]:
+        open(fifo, 'w').write('')
 
     with open(DL_FILE, 'w') as fp:
         fp.write('\n'.join(url for url in files))
 
     try:
-        sp.run([
+        p = sp.run([
             'aria2c', '-j', '2',
             '--dir', DL_DIR, f'--input-file={DL_FILE}'
         ])
@@ -152,6 +157,12 @@ if __name__ == '__main__':
     try:
         main()
     finally:
+        # for i in threads:
+        #     if i.is_alive():
+        #         print(i.name, 'alive')
+        #     else:
+        #         print(i.name, 'dead')
+
         for i in [DL_FILE, FIFO, PREVIEW_FIFO, FZF_FIFO, FZF_PID]:
             if os.path.exists(i):
                 os.remove(i)

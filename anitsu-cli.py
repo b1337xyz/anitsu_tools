@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from time import sleep
 from threading import Thread
 import subprocess as sp
 import sys
@@ -13,13 +12,15 @@ DB = os.path.join(HOME, '.local/share/anitsu_files.json')
 PREVIEW_SCRIPT = os.path.join(ROOT, 'preview.py')
 RELOAD_SCRIPT = os.path.join(ROOT, 'reload.py')
 PREVIEW_FIFO = '/tmp/anitsu.preview.fifo'
+DL_FILE = '/tmp/anitsu'
 FIFO = '/tmp/anitsu.fifo'
 FZF_FIFO = '/tmp/anitsu.fzf.fifo'
-DL_FILE = '/tmp/anitsu'
 FZF_PID = '/tmp/anitsu.fzf.pid'
 
 FZF_ARGS = [
     '-m',
+    '--border', 'none',
+    '--preview-window', 'right:52%:border-none',
     '--bind', f'enter:reload(python3 {RELOAD_SCRIPT} {{+}})',
     '--preview', f'{PREVIEW_SCRIPT} {{}}',
     '--bind', 'ctrl-a:toggle-all+last+toggle+first',
@@ -58,7 +59,7 @@ def preview_fifo():
                 return rec(q, data[k])
 
     main_k = None
-    while True:
+    while os.path.exists(PREVIEW_FIFO):
         with open(PREVIEW_FIFO, 'r') as fifo:
             data = fifo.read()
             if len(data) == 0:
@@ -88,7 +89,6 @@ def preview_fifo():
 
 def main():
     global db
-    threads = list()
     with open(DB, 'r') as fp:
         db = json.load(fp)
 
@@ -104,7 +104,7 @@ def main():
     t.start()
 
     old_db = []
-    while True:
+    while os.path.exists(FIFO):
         with open(FIFO, 'r') as fifo:
             data = fifo.read()
             data = [i.strip() for i in data.split('\n') if i]
@@ -151,6 +151,6 @@ if __name__ == '__main__':
     try:
         main()
     finally:
-        for i in [DL_FILE, FIFO, PREVIEW_FIFO, FZF_FIFO]:
+        for i in [DL_FILE, FIFO, PREVIEW_FIFO, FZF_FIFO, FZF_PID]:
             if os.path.exists(i):
                 os.remove(i)

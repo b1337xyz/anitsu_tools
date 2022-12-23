@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from threading import Thread
 import subprocess as sp
+import signal
 import sys
 import os
 import json
@@ -133,12 +134,12 @@ def main():
             fifo.write('\n'.join(output))
 
     with open(FZF_PID, 'r') as fp:
-        os.kill(fp.read().strip())
+        os.kill(int(fp.read().strip()), signal.SIGTERM)
 
     with open(DL_FILE, 'w') as fp:
         fp.write('\n'.join(url for url in files))
 
-    p = sp.run([
+    sp.run([
         'aria2c', '-j', '2',
         '--dir', DL_DIR, f'--input-file={DL_FILE}'
     ])

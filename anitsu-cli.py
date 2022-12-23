@@ -25,7 +25,7 @@ DL_FILE = '/tmp/anitsu'
 PREVIEW_FIFO = '/tmp/anitsu.preview.fifo'
 FIFO = '/tmp/anitsu.fifo'
 FZF_PID = '/tmp/anitsu.fzf.pid'
-UB_LOCK = '/tmp/anitsu.ueberzug'
+UB_FIFO = '/tmp/anitsu.ueberzug'
 
 FZF_ARGS = [
     '-m',
@@ -51,7 +51,7 @@ def fzf(args):
         out = proc.communicate('\n'.join(args))
     finally:
         open(FIFO, 'w').write('')
-        open(UB_LOCK, 'w').write('')
+        open(UB_FIFO, 'w').write('')
         open(PREVIEW_FIFO, 'w').write('')
 
 
@@ -77,9 +77,6 @@ def reload(args):
 
 
 def preview(arg):
-    if os.path.exists(UB_LOCK):
-        os.remove(UB_LOCK)
-
     RE_EXT = re.compile(r'.*\.(mkv|avi|mp4|webm|ogg|mov|rmvb|mpg|mpeg)$')
     with open(PREVIEW_FIFO, 'w') as fifo:
         fifo.write(f'{arg}\n')
@@ -94,25 +91,31 @@ def preview(arg):
         img = ''
 
     for i in [i.strip() for i in data.split('\n') if i]:
-        if not img and len(i) < 3:
-            continue
         if RE_EXT.match(i):
             stdout.write(f'\033[1;35m{i}\033[m\n')
         else:
             stdout.write(f'\033[1;34m{i}\033[m\n')
+    stdout.flush()
 
     if os.path.exists(img) and has_ueberzug:
-        stdout.flush()
-        open(UB_LOCK, 'w').write(img)
-        with ueberzug.Canvas() as canvas:
-            pv = canvas.create_placement(
-                'pv', x=0, y=0, width=32, height=20,
-                scaler=ueberzug.ScalerOption.DISTORT.value
-            )
+        open(UB_FIFO, 'w').write(img)
+
+
+def ueberzug_fifo():
+    with ueberzug.Canvas() as canvas:
+        pv = canvas.create_placement(
+            'pv', x=0, y=0, width=32, height=20,
+            scaler=ueberzug.ScalerOption.DISTORT.value
+        )
+        while os.path.exists(UB_FIFO):
+            with open(UB_FIFO, 'r') as fifo:
+                img = fifo.read().strip()
+
+            if len(img) == 0:
+                break
+
             pv.path = img
             pv.visibility = ueberzug.Visibility.VISIBLE
-            while os.path.exists(UB_LOCK):
-                sleep(0.2)
 
 
 def preview_fifo():
@@ -153,7 +156,7 @@ def preview_fifo():
 
         output = ([' '] * 22) + output
         with open(PREVIEW_FIFO, 'w') as fp:
-            fp.write('\n'.join(output[:100]))
+            fp.write('\n'.join(output[:80]))
 
 
 def main():
@@ -163,10 +166,15 @@ def main():
     with open(DB, 'r') as fp:
         db = json.load(fp)
 
+    os.mkfifo(UB_FIFO)
     os.mkfifo(PREVIEW_FIFO)
     os.mkfifo(FIFO)
 
     t = Thread(target=preview_fifo)
+    t.start()
+    threads.append(t)
+
+    t = Thread(target=ueberzug_fifo)
     t.start()
     threads.append(t)
 
@@ -175,6 +183,7 @@ def main():
     t.start()
     threads.append(t)
 
+
     files = list()
     old_db = list()
     while os.path.exists(FIFO):
@@ -182,7 +191,7 @@ def main():
             data = fifo.read()
             data = [i.strip() for i in data.split('\n') if i]
 
-        if len(data) == 0 or 'die' in data:
+        if len(data) == 0:
             break
 
         for k in data:
@@ -230,7 +239,7 @@ if __name__ == '__main__':
             main()
         finally:
             kill_fzf()
-            for i in [FIFO, PREVIEW_FIFO, FZF_PID, UB_LOCK]:
+            for i in [FIFO, PREVIEW_FIFO, FZF_PID, UB_FIFO]:
                 if os.path.exists(i):
                     os.remove(i)
             # os.kill(os.getpid(), signal.SIGTERM)

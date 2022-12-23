@@ -31,7 +31,7 @@ FZF_ARGS = [
     '-m',
     '--border', 'none',
     '--preview-window', 'left:52%:border-none',
-    '--bind', f'enter:reload(python3 {SCRIPT} reload {{+}})',
+    '--bind', f'enter:reload(python3 {SCRIPT} reload {{+}})+clear-query',
     '--preview', f'python3 {SCRIPT} preview {{}}',
     '--bind', 'ctrl-a:toggle-all+last+toggle+first',
     '--bind', 'ctrl-g:first',
@@ -152,9 +152,8 @@ def preview_fifo():
                 output = []
 
         output = ([' '] * 22) + output
-
         with open(PREVIEW_FIFO, 'w') as fp:
-            fp.write('\n'.join(output[:30]))
+            fp.write('\n'.join(output[:100]))
 
 
 def main():

@@ -23,7 +23,7 @@ RE_MAL  = re.compile(r'myanimelist\.net/\w*/(\d*)')
 RE_ANI  = re.compile(r'anilist\.co/\w*/(\d*)')
 RE_GDR  = re.compile(r'href=\"(https://drive\.google[^\"]*)')
 RE_PASS = re.compile(r'Senha: <span[^>]*>(.*)</span')
-MAX_ATTEMPTS = 5
+MAX_ATTEMPTS = 3
 Q_SIZE = 10
 NOW = datetime.isoformat(datetime.now())
 
@@ -110,7 +110,7 @@ async def get_posts(queue):
 
 
 async def main():
-    global session, db, qsize, last_run
+    global session, db, last_run
     try:
         with open(DB, 'r') as fp:
             db = json.load(fp)
@@ -142,11 +142,12 @@ async def main():
         queue = asyncio.Queue()
         for p in range(2, total_pages+1):
             queue.put_nowait(p)
-        qsize = queue.qsize()
+
         tasks = []
         for _ in range(Q_SIZE):
             tasks += [asyncio.create_task(get_posts(queue))]
         await queue.join()
+
         for task in tasks:
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)

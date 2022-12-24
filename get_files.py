@@ -48,7 +48,6 @@ async def nextcloud(k, url, password=''):
         return
 
     root = tree()
-    file_count = 0
     for i in re.findall(r'/nextcloud/public.php/webdav/([^<]*)', xml):
         if i.endswith('/') or not i:
             continue
@@ -56,21 +55,18 @@ async def nextcloud(k, url, password=''):
         dl_link = f'https://{user}:{password}@{webdav}/{i}'
         path = i.split('webdav')[-1].split('/')
         set_value(root, path, dl_link)
-        file_count += 1
 
     if not root and 'contenttype>video/' in xml:
         try:
             async with session.request(method='HEAD', url=f'https://{webdav}', auth=auth) as r:
                 content = r.headers['content-disposition']
-                filename = re.search(r'filename=\"([^\"]*)', content).group(1)
+            filename = re.search(r'filename=\"([^\"]*)', content).group(1)
         except Exception as err:
             print(f'\033[1;31m{err}\033[m\n{url}')
             return
         dl_link = f'https://{user}:{password}@{webdav}/'
         root[unquote(filename)] = dl_link
-        file_count += 1
 
-    print(db[k]['title'], f'{file_count} files')
     db[k]['nextcloud'][url] = root
 
 

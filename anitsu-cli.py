@@ -51,7 +51,6 @@ def fzf(args):
     )
     open(FZF_PID, 'w').write(str(proc.pid))
     out = proc.communicate('\n'.join(args))
-    os.remove(FZF_PID)
     if proc.returncode != 0:
         sleep(0.3)
         cleanup()
@@ -113,7 +112,7 @@ def preview(arg):
         img = ''
 
     for i in [i.strip() for i in data.split('\n') if i]:
-        if RE_EXT.match(i):
+        if RE_EXT.match(i.lower()):
             stdout.write(f'\033[1;35m{i}\033[m\n')
         else:
             stdout.write(f'\033[1;34m{i}\033[m\n')

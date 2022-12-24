@@ -259,7 +259,7 @@ def main():
                 '--dir', DL_DIR, f'--input-file={DL_FILE}'
             ])
         except KeyboardInterrupt:
-            print('\nbye')
+            pass
         finally:
             os.remove(DL_FILE)
 
@@ -269,6 +269,7 @@ if __name__ == '__main__':
         try:
             main()
         finally:
+            print('\nbye')
             for i in threads:
                 if i.is_alive():
                     # print(i.name)

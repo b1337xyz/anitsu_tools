@@ -1,7 +1,5 @@
 # anitsu_tools
 
-![gif](anitsu-cli.demo.gif)
-
 > Dependencies
 - aria2
 - imagemagick (converts images to jpeg in `download_images.py`)
@@ -10,3 +8,7 @@
 - [aiohttp](https://github.com/aio-libs/aiohttp)
 - [aiofiles](https://github.com/Tinche/aiofiles) (`download_images.py`)
 - [ueberzug](https://github.com/b1337xyz/ueberzug) (for `anitsu-cli.py` image support)
+
+![gif](anitsu-cli.demo.gif)
+
+

@@ -181,9 +181,6 @@ def preview_fifo():
             else:
                 output = rec(k, db[main_k])
 
-        if not output:
-            output = []
-
         output = ([' '] * 24) + output
         with open(PREVIEW_FIFO, 'w') as fp:
             fp.write('\n'.join(output[:80]))

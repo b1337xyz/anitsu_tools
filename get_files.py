@@ -88,8 +88,7 @@ async def nextcloud(k, url, password=''):
 
         dl_link = f'https://{user}:{password}@{webdav}/{path}'
         path = path.split('/')
-        for i in range(len(path)):
-            path[i] = f'{path[i]} (size-{size}) (total-{total})'
+        path[-1] = f'{path[-1]} (size-{size}) (total-{total})'
 
         set_value(root, path, dl_link)
 

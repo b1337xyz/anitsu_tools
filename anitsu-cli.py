@@ -196,6 +196,7 @@ def preview_fifo():
                     output = [i for i in db[main_k][k]]
             else:
                 output = rec(k, db[main_k])
+
         if not output and k != '..':
             output = [k]
 

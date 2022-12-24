@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+try:
+    import ueberzug.lib.v0 as ueberzug
+    has_ueberzug = True
+except ImportError:
+    has_ueberzug = False
+
 from sys import argv, stdout, stderr
 from threading import Thread
 from time import sleep
@@ -120,11 +126,6 @@ def preview(arg):
 def ueberzug_fifo():
     """ Ueberzug fifo listener """
 
-    try:
-        import ueberzug.lib.v0 as ueberzug
-    except ImportError:
-        return
-
     # https://github.com/b1337xyz/ueberzug#python
     with ueberzug.Canvas() as canvas:
         pv = canvas.create_placement(
@@ -192,9 +193,10 @@ def main():
     global db, threads
     threads = list()
 
-    for i in [UB_FIFO, PREVIEW_FIFO, FIFO]:
-        if os.path.exists(i):
-            os.remove(i)
+    if has_ueberzug:
+        os.mkfifo(UB_FIFO)
+
+    for i in [PREVIEW_FIFO, FIFO]:
         os.mkfifo(i)
 
     with open(DB, 'r') as fp:

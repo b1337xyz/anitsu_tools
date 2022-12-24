@@ -5,9 +5,8 @@ try:
 except ImportError:
     has_ueberzug = False
 
-from sys import argv, stdout
+from sys import argv, stdout, stderr
 from threading import Thread
-from time import sleep
 import json
 import os
 import re
@@ -27,6 +26,7 @@ FIFO = '/tmp/anitsu.fifo'
 FZF_PID = '/tmp/anitsu.fzf.pid'
 UB_FIFO = '/tmp/anitsu.ueberzug'
 PID = os.getpid()
+RE_EXT = re.compile(r'.*\.(mkv|avi|mp4|webm|ogg|mov|rmvb|mpg|mpeg)$')
 
 FZF_ARGS = [
     '-m',
@@ -49,6 +49,8 @@ def fzf(args):
     )
     open(FZF_PID, 'w').write(str(proc.pid))
     out = proc.communicate('\n'.join(args))
+    if proc.returncode != 0:
+        cleanup()
 
 
 def cleanup():
@@ -63,24 +65,23 @@ def cleanup():
         except Exception as err:
             pass
 
-    try:
-        for i in [FIFO, UB_FIFO, PREVIEW_FIFO]:
-            if os.path.exists(i):
-                f = open(i, 'w')
-                f.flush()
-                # f.close()
-    except KeyboardInterrupt:
-        pass
-    except Exception as err:
-        pass
+    for i in [UB_FIFO, PREVIEW_FIFO, FIFO]:
+        if os.path.exists(i):
+            # f = open(i, 'w')
+            # f.flush()
+            # f.close()
+            with open(i, 'w') as fp:
+                fp.write('')
+            os.remove(i)
+
+    # try:
+    #     sp.run(['pkill', '-9', '-f', 'ueberzug'])
+    # except:
+    #     pass
 
     # for i in threads:
     #     if i.is_alive():
     #         print(i.name)
-
-    for i in [FIFO, PREVIEW_FIFO, FZF_PID, UB_FIFO]:
-        if os.path.exists(i):
-            os.remove(i)
 
     # kill it self
     # os.kill(PID, signal.SIGTERM)
@@ -98,7 +99,6 @@ def reload(args):
 
 
 def preview(arg):
-    RE_EXT = re.compile(r'.*\.(mkv|avi|mp4|webm|ogg|mov|rmvb|mpg|mpeg)$')
     with open(PREVIEW_FIFO, 'w') as fifo:
         fifo.write(f'{arg}\n')
 
@@ -182,14 +182,15 @@ def preview_fifo():
 
 def main():
     global db, threads
-
     threads = list()
+
+    for i in [UB_FIFO, PREVIEW_FIFO, FIFO]:
+        if os.path.exists(i):
+            os.remove(i)
+        os.mkfifo(i)
+
     with open(DB, 'r') as fp:
         db = json.load(fp)
-
-    os.mkfifo(UB_FIFO)
-    os.mkfifo(PREVIEW_FIFO)
-    os.mkfifo(FIFO)
 
     t = Thread(target=preview_fifo)
     t.start()
@@ -203,7 +204,6 @@ def main():
     t = Thread(target=fzf, args=(keys,))
     t.start()
     threads.append(t)
-
 
     files = list()
     old_db = list()
@@ -237,9 +237,12 @@ def main():
         with open(FIFO, 'w') as fifo:
             fifo.write('\n'.join(output))
 
-    cleanup()
+    if os.path.exists(FIFO):
+        os.remove(FIFO)
 
     if files:
+        cleanup()
+
         with open(DL_FILE, 'w') as fp:
             fp.write('\n'.join(url for url in files))
 
@@ -258,10 +261,13 @@ def main():
 if __name__ == '__main__':
     if len(argv) == 1:
         try:
-            cleanup()
             main()
         finally:
-            cleanup()
+            for i in threads:
+                if i.is_alive():
+                    print(i.name)
+                    i.join()
+
     elif 'preview' == argv[1]:
         preview(argv[2])
     elif 'reload'  == argv[1]:

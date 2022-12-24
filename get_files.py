@@ -83,6 +83,9 @@ async def nextcloud(k, url, password=''):
             total = size
             continue
 
+        if path.endswith('/'):
+            continue
+
         dl_link = f'https://{user}:{password}@{webdav}/{path}'
         path = path.split('/')
         for i in range(len(path)):

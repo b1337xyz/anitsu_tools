@@ -35,5 +35,6 @@ def count(data):
 
 print(count(files))
 
+files = {k: files[k] for k in sorted(list(files.keys()))}
 with open(OUTPUT, 'w') as fp:
     json.dump(files, fp)

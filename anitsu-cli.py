@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-try:
-    import ueberzug.lib.v0 as ueberzug
-    has_ueberzug = True
-except ImportError:
-    has_ueberzug = False
-
 from sys import argv, stdout, stderr
 from threading import Thread
 from time import sleep
@@ -15,7 +9,13 @@ import signal
 import subprocess as sp
 import sys
 
-has_ueberzug = bool(os.getenv('DISPLAY'))
+has_ueberzug = False
+try:
+    if os.getenv('DISPLAY'):
+        import ueberzug.lib.v0 as ueberzug
+        has_ueberzug = True
+except ImportError:
+    pass
 
 SCRIPT = os.path.realpath(__file__)
 HOME = os.getenv('HOME')

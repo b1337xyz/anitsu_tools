@@ -207,6 +207,10 @@ def main():
     global db, threads
     threads = list()
 
+    for i in [FIFO, UB_FIFO, PREVIEW_FIFO]:
+        if os.path.exists(i):
+            os.remove(i)
+
     if has_ueberzug:
         os.mkfifo(UB_FIFO)
 

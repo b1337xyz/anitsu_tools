@@ -126,15 +126,14 @@ def preview(arg):
         try:
             size = re.search(r' \(size-(\d+[^\)]*)', i).group(1)
         except AttributeError:
-            size = ''
-
+            size = '404'
         i = re.sub(r' \((?:size|total|post)-.*$', '', i)
         if RE_EXT.match(i.lower()):
             stdout.write(f'{size:<9} \033[1;35m{i}\033[m\n')
         else:
-            stdout.write(f'{size:<9} \033[1;34m{i}\033[m\n')
-    stdout.flush()
+            stdout.write(f'\033[1;34m{i}\033[m\n')
 
+    stdout.flush()
     if os.path.exists(img) and has_ueberzug:
         open(UB_FIFO, 'w').write(img)
 

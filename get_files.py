@@ -26,7 +26,7 @@ def tree():
 def set_value(root, path, value):
     for d in path[:-1]:
         root = root[unquote(d)]
-    root[unquote(path[-1])] = value
+    root[path[-1]] = value
 
 
 def get_psize(size):
@@ -72,15 +72,15 @@ async def nextcloud(k, url, password=''):
         dsize = prop.getElementsByTagName('d:quota-used-bytes')
 
         if fsize: # is a file
-            size = fsize[0].firstChild.data
+            fsize = fsize[0].firstChild.data
+            file_size = get_psize(int(fsize))
         elif dsize:
-            size = dsize[0].firstChild.data
-
-        size = get_psize(int(size))
+            dsize = dsize[0].firstChild.data
+            dir_size = get_psize(int(dsize))
 
         if not path:
             # hopefully the first item of this loop... :-)
-            total = size
+            # total = size
             continue
 
         if path.endswith('/'):
@@ -88,8 +88,8 @@ async def nextcloud(k, url, password=''):
 
         dl_link = f'https://{user}:{password}@{webdav}/{path}'
         path = path.split('/')
-        path[-1] = f'{path[-1]} (size-{size}) (total-{total})'
-
+        path[-1] = unquote(f'{path[-1]} (size-{file_size}) (total-{dir_size})')
+        print(path[-1])
         set_value(root, path, dl_link)
 
     if not root and 'contenttype>video/' in xml:

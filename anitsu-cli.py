@@ -7,6 +7,7 @@ except ImportError:
 
 from sys import argv, stdout, stderr
 from threading import Thread
+from time import sleep
 import json
 import os
 import re
@@ -50,6 +51,7 @@ def fzf(args):
     open(FZF_PID, 'w').write(str(proc.pid))
     out = proc.communicate('\n'.join(args))
     if proc.returncode != 0:
+        sleep(0.3)
         cleanup()
 
 
@@ -67,21 +69,12 @@ def cleanup():
 
     for i in [UB_FIFO, PREVIEW_FIFO, FIFO]:
         if os.path.exists(i):
-            # f = open(i, 'w')
-            # f.flush()
-            # f.close()
             with open(i, 'w') as fp:
                 fp.write('')
             os.remove(i)
 
-    # try:
-    #     sp.run(['pkill', '-9', '-f', 'ueberzug'])
-    # except:
-    #     pass
-
-    # for i in threads:
-    #     if i.is_alive():
-    #         print(i.name)
+    # kill ueberzug
+    # sp.run(['pkill', '-9', '-f', 'ueberzug'])
 
     # kill it self
     # os.kill(PID, signal.SIGTERM)
@@ -89,16 +82,20 @@ def cleanup():
 
 def reload(args):
     """ Receive a key from the FIFO and output it's items to fzf """
+
     with open(FIFO, 'w') as fifo:
         fifo.write('\n'.join(args))
 
     with open(FIFO, 'r') as fifo:
         data = fifo.read()
-        for i in [i.strip() for i in data.split('\n') if i]:
-            stdout.write(f'{i}\n')
+
+    for i in [i.strip() for i in data.split('\n') if i]:
+        stdout.write(f'{i}\n')
 
 
 def preview(arg):
+    """ List files and send the post image to ueberzug FIFO """
+
     with open(PREVIEW_FIFO, 'w') as fifo:
         fifo.write(f'{arg}\n')
 
@@ -123,6 +120,9 @@ def preview(arg):
 
 
 def ueberzug_fifo():
+    """ Ueberzug fifo listener """
+
+    # https://github.com/b1337xyz/ueberzug#python
     with ueberzug.Canvas() as canvas:
         pv = canvas.create_placement(
             'pv', x=0, y=0, width=32, height=20,
@@ -140,7 +140,11 @@ def ueberzug_fifo():
 
 
 def preview_fifo():
+    """ Preview fifo listener """
+
     def rec(q, data):
+        """ Recursively find "directories" and return them """
+
         if q in data:
             if isinstance(data[q], dict):
                 return [i for i in data[q]]
@@ -155,25 +159,26 @@ def preview_fifo():
     while os.path.exists(PREVIEW_FIFO):
         with open(PREVIEW_FIFO, 'r') as fifo:
             data = fifo.read()
-            if len(data) == 0:
-                return
 
-            output = list()
-            for k in [i.strip() for i in data.split('\n') if i]:
-                if k == '..':
-                    break
-                elif k in db:
-                    main_k = k
-                    if isinstance(db[k], dict):
-                        output = [i for i in db[k]]
-                elif k in db[main_k]:
-                    if isinstance(db[main_k][k], dict):
-                        output = [i for i in db[main_k][k]]
-                else:
-                    output = rec(k, db[main_k])
+        if len(data) == 0:
+            return
 
-            if not output:
-                output = []
+        output = list()
+        for k in [i.strip() for i in data.split('\n') if i]:
+            if k == '..':
+                break
+            elif k in db:
+                main_k = k
+                if isinstance(db[k], dict):
+                    output = [i for i in db[k]]
+            elif k in db[main_k]:
+                if isinstance(db[main_k][k], dict):
+                    output = [i for i in db[main_k][k]]
+            else:
+                output = rec(k, db[main_k])
+
+        if not output:
+            output = []
 
         output = ([' '] * 24) + output
         with open(PREVIEW_FIFO, 'w') as fp:
@@ -252,8 +257,7 @@ def main():
                 '--dir', DL_DIR, f'--input-file={DL_FILE}'
             ])
         except KeyboardInterrupt:
-            pass
-            # os.system('clear')
+            print('\nbye')
         finally:
             os.remove(DL_FILE)
 

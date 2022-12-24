@@ -105,7 +105,10 @@ def preview(arg):
         fifo.write(f'{arg}\n')
 
     with open(PREVIEW_FIFO, 'r') as fifo:
-        data = fifo.read()
+        data = fifo.read().split('\n')
+
+    if has_ueberzug:
+        stdout.write('\n' * 22)
 
     try:
         post_id = re.search(r' \(post-(\d+)\)$', arg).group(1)
@@ -113,11 +116,23 @@ def preview(arg):
     except AttributeError:
         img = ''
 
-    for i in [i.strip() for i in data.split('\n') if i]:
+    try:
+        total = re.search(r' \(total-([^\)]*)\)', data[-1]).group(1)
+        stdout.write(f'Total size: {total}\n')
+    except AttributeError:
+        pass
+
+    for i in data:
+        try:
+            size = re.search(r' \(size-(\d+[^\)]*)', i).group(1)
+        except AttributeError:
+            size = ''
+
+        i = re.sub(r' \((?:size|total|post)-.*$', '', i)
         if RE_EXT.match(i.lower()):
-            stdout.write(f'\033[1;35m{i}\033[m\n')
+            stdout.write(f'{size:<9} \033[1;35m{i}\033[m\n')
         else:
-            stdout.write(f'\033[1;34m{i}\033[m\n')
+            stdout.write(f'{size:<9} \033[1;34m{i}\033[m\n')
     stdout.flush()
 
     if os.path.exists(img) and has_ueberzug:
@@ -181,9 +196,8 @@ def preview_fifo():
                     output = [i for i in db[main_k][k]]
             else:
                 output = rec(k, db[main_k])
-
-        if has_ueberzug:
-            output = ([' '] * 24) + output # add `n` empty lines
+        if not output and k != '..':
+            output = [k]
 
         with open(PREVIEW_FIFO, 'w') as fp:
             fp.write('\n'.join(output[:80]))

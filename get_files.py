@@ -2,6 +2,7 @@
 from aiohttp import ClientSession, BasicAuth
 from urllib.parse import unquote
 from collections import defaultdict
+from xml.dom import minidom
 import random
 import asyncio
 import json
@@ -28,6 +29,17 @@ def set_value(root, path, value):
     root[unquote(path[-1])] = value
 
 
+def get_psize(size):
+    units = ["KB", "MB", "GB", "TB", "PB"]
+    psize = f"{size} B"
+    for i in units:
+        if size < 1000:
+            break
+        size /= 1000
+        psize = f"{size:.2f} {i}"
+    return psize
+
+
 async def nextcloud(k, url, password=''):
     user = url.split('/')[-1]
     domain = url.split("/")[0]
@@ -47,25 +59,50 @@ async def nextcloud(k, url, password=''):
     else:
         return
 
+    dom = minidom.parseString(xml)
+
     root = tree()
-    for i in re.findall(r'/nextcloud/public.php/webdav/([^<]*)', xml):
-        if i.endswith('/') or not i:
+    for e in dom.getElementsByTagName('d:response'):
+        href = e.getElementsByTagName('d:href')
+        if not href:
+            continue
+        path = href[0].firstChild.data.split('webdav')[-1][1:]
+        prop = e.getElementsByTagName('d:prop')[0]
+        fsize = prop.getElementsByTagName('d:getcontentlength')
+        dsize = prop.getElementsByTagName('d:quota-used-bytes')
+
+        if fsize: # is a file
+            size = fsize[0].firstChild.data
+        elif dsize:
+            size = dsize[0].firstChild.data
+
+        size = get_psize(int(size))
+
+        if not path:
+            # hopefully the first item of this loop... :-)
+            total = size
             continue
 
-        dl_link = f'https://{user}:{password}@{webdav}/{i}'
-        path = i.split('webdav')[-1].split('/')
+        dl_link = f'https://{user}:{password}@{webdav}/{path}'
+        path = path.split('/')
+        for i in range(len(path)):
+            path[i] = f'{path[i]} (size-{size}) (total-{total})'
+
         set_value(root, path, dl_link)
 
     if not root and 'contenttype>video/' in xml:
         try:
             async with session.request(method='HEAD', url=f'https://{webdav}', auth=auth) as r:
                 content = r.headers['content-disposition']
-            filename = re.search(r'filename=\"([^\"]*)', content).group(1)
         except Exception as err:
             print(f'\033[1;31m{err}\033[m\n{url}')
             return
         dl_link = f'https://{user}:{password}@{webdav}/'
-        root[unquote(filename)] = dl_link
+        size = re.search(r'd:getcontentlength>(\d+)<', xml).group(1)
+        size = get_psize(int(size))
+        filename = re.search(r'filename=\"([^\"]*)', content).group(1)
+        filename = unquote(filename)
+        root[f'{filename} (size-{size}) (total-{size})'] = dl_link
 
     db[k]['nextcloud'][url] = root
 

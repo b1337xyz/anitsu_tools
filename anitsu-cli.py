@@ -15,6 +15,8 @@ import signal
 import subprocess as sp
 import sys
 
+has_ueberzug = bool(os.getenv('DISPLAY'))
+
 SCRIPT = os.path.realpath(__file__)
 HOME = os.getenv('HOME')
 ROOT = os.path.dirname(os.path.realpath(__file__))
@@ -180,7 +182,9 @@ def preview_fifo():
             else:
                 output = rec(k, db[main_k])
 
-        output = ([' '] * 24) + output
+        if has_ueberzug:
+            output = ([' '] * 24) + output # add `n` empty lines
+
         with open(PREVIEW_FIFO, 'w') as fp:
             fp.write('\n'.join(output[:80]))
 

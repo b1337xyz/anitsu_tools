@@ -104,6 +104,7 @@ async def nextcloud(k, url, password=''):
         size = get_psize(int(size))
         filename = re.search(r'filename=\"([^\"]*)', content).group(1)
         filename = unquote(filename)
+        print(filename)
         root[f'{filename} (size-{size}) (total-{size})'] = dl_link
 
     db[k]['nextcloud'][url] = root

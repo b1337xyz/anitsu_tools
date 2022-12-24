@@ -14,7 +14,6 @@ Q_SIZE = 15
 async def download(queue):
     while True:
         url, image_path = await queue.get()
-        print(image_path)
         async with session.get(url) as resp:
             if resp.status == 200:
                 f = await aiofiles.open(image_path, mode='wb')
@@ -26,17 +25,13 @@ async def download(queue):
         if os.path.exists(image_path):
             try:
                 p = sp.run(['file', '-bi', image_path], stdout=sp.PIPE)
-                out = p.stdout.decode().strip()
-                if not out.startswith('image/jpeg'):
-                    print(f'converting {out} to jpeg...')
+                if 'jpeg' not in p.stdout.decode():
                     sp.run([
                         'convert', f'{image_path}[0]',
                         '-resize', '424x600>', image_path
                     ])
             except:
                 os.remove(image_path)
-                print(f'convertion failed: "{image_path}" removed')
-
         queue.task_done()
 
 

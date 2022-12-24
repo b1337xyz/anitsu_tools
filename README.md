@@ -10,5 +10,3 @@
 - [ueberzug](https://github.com/b1337xyz/ueberzug) (for `anitsu-cli.py` image support)
 
 ![gif](anitsu-cli.demo.gif)
-
-

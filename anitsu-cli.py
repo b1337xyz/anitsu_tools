@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-try:
-    import ueberzug.lib.v0 as ueberzug
-    has_ueberzug = True
-except ImportError:
-    has_ueberzug = False
-
 from sys import argv, stdout, stderr
 from threading import Thread
 from time import sleep
@@ -17,16 +11,17 @@ import sys
 
 SCRIPT = os.path.realpath(__file__)
 HOME = os.getenv('HOME')
-IMG_DIR = os.path.join(HOME, '.cache/anitsu_covers')
 ROOT = os.path.dirname(os.path.realpath(__file__))
+IMG_DIR = os.path.join(HOME, '.cache/anitsu_covers')
 DL_DIR = os.path.join(HOME, 'Downloads')
 DB = os.path.join(HOME, '.local/share/anitsu_files.json')
+
 DL_FILE = '/tmp/anitsu'
 PREVIEW_FIFO = '/tmp/anitsu.preview.fifo'
 FIFO = '/tmp/anitsu.fifo'
 FZF_PID = '/tmp/anitsu.fzf.pid'
 UB_FIFO = '/tmp/anitsu.ueberzug'
-PID = os.getpid()
+# PID = os.getpid()
 RE_EXT = re.compile(r'.*\.(mkv|avi|mp4|webm|ogg|mov|rmvb|mpg|mpeg)$')
 
 FZF_ARGS = [
@@ -50,6 +45,7 @@ def fzf(args):
     )
     open(FZF_PID, 'w').write(str(proc.pid))
     out = proc.communicate('\n'.join(args))
+    os.remove(FZF_PID)
     if proc.returncode != 0:
         sleep(0.3)
         cleanup()
@@ -123,6 +119,11 @@ def preview(arg):
 
 def ueberzug_fifo():
     """ Ueberzug fifo listener """
+
+    try:
+        import ueberzug.lib.v0 as ueberzug
+    except ImportError:
+        return
 
     # https://github.com/b1337xyz/ueberzug#python
     with ueberzug.Canvas() as canvas:
@@ -271,7 +272,7 @@ if __name__ == '__main__':
         finally:
             for i in threads:
                 if i.is_alive():
-                    print(i.name)
+                    # print(i.name)
                     i.join()
 
     elif 'preview' == argv[1]:

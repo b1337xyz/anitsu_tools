@@ -43,6 +43,16 @@ FZF_ARGS = [
     '--bind', 'ctrl-l:last'
 ]
 
+def get_psize(size):
+    units = ["KB", "MB", "GB", "TB", "PB"]
+    psize = f"{size} B"
+    for i in units:
+        if size < 1000:
+            break
+        size /= 1000
+        psize = f"{size:.2f} {i}"
+    return psize
+
 
 def fzf(args):
     proc = sp.Popen(
@@ -116,24 +126,28 @@ def preview(arg):
     except AttributeError:
         img = ''
 
-    try:
-        total = re.search(r' \(total-([^\)]*)\)', data[-1]).group(1)
-        stdout.write(f'Total size: {total}\n')
-    except AttributeError:
-        pass
-
-    for i in data:
+    total = 0
+    data = sorted(data, key=lambda x: isinstance(
+        re.match(r'.*\(size-\d+\)', x), re.Match
+    ))
+    for i in range(len(data)):
+        s = data[i].strip()
         try:
-            size = re.search(r' \(size-(\d+[^\)]*)', i).group(1)
+            size = re.search(r' \(size-(\d+)\)$', s).group(1)
+            total += int(size)
+            size = get_psize(int(size))
+            s = re.sub(r' \((?:size|post)-.*$', '', s)
+            s = f'{size:<9} \033[1;35m{s}\033[m'
         except AttributeError:
-            size = '404'
-        i = re.sub(r' \((?:size|total|post)-.*$', '', i)
-        if RE_EXT.match(i.lower()):
-            stdout.write(f'{size:<9} \033[1;35m{i}\033[m\n')
-        else:
-            stdout.write(f'\033[1;34m{i}\033[m\n')
+            s = re.sub(r' \((?:size|post)-.*$', '', s)
+            s = f'\033[1;34m{s}\033[m'
+        data[i] = s
 
+    if total > 0:
+        stdout.write(f'Total size: {get_psize(total)}\n')
+    stdout.write('\n'.join(data))
     stdout.flush()
+
     if os.path.exists(img) and has_ueberzug:
         open(UB_FIFO, 'w').write(img)
 

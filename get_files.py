@@ -29,17 +29,6 @@ def set_value(root, path, value):
     root[path[-1]] = value
 
 
-def get_psize(size):
-    units = ["KB", "MB", "GB", "TB", "PB"]
-    psize = f"{size} B"
-    for i in units:
-        if size < 1000:
-            break
-        size /= 1000
-        psize = f"{size:.2f} {i}"
-    return psize
-
-
 async def nextcloud(k, url, password=''):
     user = url.split('/')[-1]
     domain = url.split("/")[0]
@@ -67,16 +56,6 @@ async def nextcloud(k, url, password=''):
         if not href:
             continue
         path = href[0].firstChild.data.split('webdav')[-1][1:]
-        prop = e.getElementsByTagName('d:prop')[0]
-        fsize = prop.getElementsByTagName('d:getcontentlength')
-        dsize = prop.getElementsByTagName('d:quota-used-bytes')
-
-        if fsize: # is a file
-            fsize = fsize[0].firstChild.data
-            file_size = get_psize(int(fsize))
-        elif dsize:
-            dsize = dsize[0].firstChild.data
-            dir_size = get_psize(int(dsize))
 
         if not path:
             # hopefully the first item of this loop... :-)
@@ -86,9 +65,13 @@ async def nextcloud(k, url, password=''):
         if path.endswith('/'):
             continue
 
+        prop = e.getElementsByTagName('d:prop')[0]
+        size = prop.getElementsByTagName('d:getcontentlength')
+        size = size[0].firstChild.data
+
         dl_link = f'https://{user}:{password}@{webdav}/{path}'
         path = path.split('/')
-        path[-1] = unquote(f'{path[-1]} (size-{file_size}) (total-{dir_size})')
+        path[-1] = unquote(f'{path[-1]} (size-{size})')
         print(path[-1])
         set_value(root, path, dl_link)
 
@@ -101,11 +84,10 @@ async def nextcloud(k, url, password=''):
             return
         dl_link = f'https://{user}:{password}@{webdav}/'
         size = re.search(r'd:getcontentlength>(\d+)<', xml).group(1)
-        size = get_psize(int(size))
         filename = re.search(r'filename=\"([^\"]*)', content).group(1)
-        filename = unquote(filename)
+        filename = f'{unquote(filename)} (size-{size})'
+        root[filename] = dl_link
         print(filename)
-        root[f'{filename} (size-{size}) (total-{size})'] = dl_link
 
     db[k]['nextcloud'][url] = root
 

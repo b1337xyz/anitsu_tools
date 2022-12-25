@@ -2,7 +2,7 @@
 
 > Dependencies
 - aria2
-- imagemagick (converts images to jpeg in `download_images.py`)
+- [imagemagick](https://github.com/ImageMagick/ImageMagick) (converts images to jpeg in `download_images.py`)
 - [fzf](https://github.com/junegunn/fzf)
 - [requests](https://requests.readthedocs.io/en/latest/)
 - [aiohttp](https://github.com/aio-libs/aiohttp)

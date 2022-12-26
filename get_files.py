@@ -72,7 +72,6 @@ async def nextcloud(k, url, password=''):
         dl_link = f'https://{user}:{password}@{webdav}/{path}'
         path = path.split('/')
         path[-1] = unquote(f'{path[-1]} (size-{size})')
-        print(path[-1])
         set_value(root, path, dl_link)
 
     if not root and 'contenttype>video/' in xml:
@@ -87,7 +86,6 @@ async def nextcloud(k, url, password=''):
         filename = re.search(r'filename=\"([^\"]*)', content).group(1)
         filename = f'{unquote(filename)} (size-{size})'
         root[filename] = dl_link
-        print(filename)
 
     db[k]['nextcloud'][url] = root
 

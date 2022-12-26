@@ -225,20 +225,19 @@ def main():
         if os.path.exists(i):
             os.remove(i)
 
-    if has_ueberzug:
-        os.mkfifo(UB_FIFO)
-
     for i in [PREVIEW_FIFO, FIFO]:
         os.mkfifo(i)
+
+    if has_ueberzug:
+        os.mkfifo(UB_FIFO)
+        t = Thread(target=ueberzug_fifo)
+        t.start()
+        threads.append(t)
 
     with open(DB, 'r') as fp:
         db = json.load(fp)
 
     t = Thread(target=preview_fifo)
-    t.start()
-    threads.append(t)
-
-    t = Thread(target=ueberzug_fifo)
     t.start()
     threads.append(t)
 

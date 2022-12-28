@@ -18,8 +18,8 @@ except ImportError:
     pass
 
 SCRIPT = os.path.realpath(__file__)
-HOME = os.getenv('HOME')
 ROOT = os.path.dirname(os.path.realpath(__file__))
+HOME = os.getenv('HOME')
 IMG_DIR = os.path.join(HOME, '.cache/anitsu_covers')
 DL_DIR = os.path.join(HOME, 'Downloads')
 DB = os.path.join(HOME, '.local/share/anitsu_files.json')
@@ -299,17 +299,22 @@ def main():
 
 
 if __name__ == '__main__':
-    if len(argv) == 1:
+    args = argv[1:]
+    if not args:
         try:
             main()
         finally:
             print('\nbye')
+
             for i in threads:
                 if i.is_alive():
                     # print(i.name)
                     i.join()
 
-    elif 'preview' == argv[1]:
-        preview(argv[2])
-    elif 'reload'  == argv[1]:
-        reload(argv[2:])
+    elif 'update'  in args:
+       script = os.path.join(ROOT, 'update.sh')
+       sp.run(['bash', script])
+    elif 'preview' in args:
+        preview(args[1])
+    elif 'reload'  in args:
+        reload(args[1:])

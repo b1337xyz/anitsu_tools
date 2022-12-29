@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from sys import argv, stdout, stderr
+from sys import argv, stdout
 from threading import Thread
 from time import sleep
 import json
@@ -7,7 +7,6 @@ import os
 import re
 import signal
 import subprocess as sp
-import sys
 
 has_ueberzug = False
 try:
@@ -43,6 +42,7 @@ FZF_ARGS = [
     '--bind', 'ctrl-l:last'
 ]
 
+
 def get_psize(size):
     units = ["KB", "MB", "GB", "TB", "PB"]
     psize = f"{size} B"
@@ -62,7 +62,7 @@ def fzf(args):
        universal_newlines=True
     )
     open(FZF_PID, 'w').write(str(proc.pid))
-    out = proc.communicate('\n'.join(args))
+    proc.communicate('\n'.join(args))
     if proc.returncode != 0:
         sleep(0.3)
         cleanup()
@@ -79,7 +79,7 @@ def cleanup():
                 pid = int(fp.read().strip())
             os.kill(pid, signal.SIGTERM)
             os.remove(FZF_PID)
-        except Exception as err:
+        except Exception:
             pass
 
     for i in [UB_FIFO, PREVIEW_FIFO, FIFO]:
@@ -288,7 +288,7 @@ def main():
             fp.write('\n'.join(url for url in files))
 
         try:
-            p = sp.run([
+            sp.run([
                 'aria2c', '-j', '2',
                 '--dir', DL_DIR, f'--input-file={DL_FILE}'
             ])
@@ -310,11 +310,10 @@ if __name__ == '__main__':
                 if i.is_alive():
                     # print(i.name)
                     i.join()
-
-    elif 'update'  in args:
-       script = os.path.join(ROOT, 'update.sh')
-       sp.run(['bash', script])
+    elif 'update' in args:
+        script = os.path.join(ROOT, 'update.sh')
+        sp.run(['bash', script])
     elif 'preview' in args:
         preview(args[1])
-    elif 'reload'  in args:
+    elif 'reload' in args:
         reload(args[1:])

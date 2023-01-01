@@ -21,6 +21,7 @@ ROOT = os.path.dirname(os.path.realpath(__file__))
 HOME = os.getenv('HOME')
 IMG_DIR = os.path.join(HOME, '.cache/anitsu_covers')
 DL_DIR = os.path.join(HOME, 'Downloads')
+DL_DIR = os.path.join('/mnt/anon/king/Anime')
 DB = os.path.join(HOME, '.local/share/anitsu_files.json')
 
 DL_FILE = '/tmp/anitsu'
@@ -34,9 +35,10 @@ RE_EXT = re.compile(r'.*\.(mkv|avi|mp4|webm|ogg|mov|rmvb|mpg|mpeg)$')
 FZF_ARGS = [
     '-m',
     '--border', 'none',
+    '--preview', f'python3 {SCRIPT} preview {{}}',
     '--preview-window', 'left:52%:border-none',
     '--bind', f'enter:reload(python3 {SCRIPT} reload {{+}})+clear-query',
-    '--preview', f'python3 {SCRIPT} preview {{}}',
+    '--bind', f'ctrl-d:execute(python3 {SCRIPT} download_folder {{+}})',
     '--bind', 'ctrl-a:toggle-all+last+toggle+first',
     '--bind', 'ctrl-g:first',
     '--bind', 'ctrl-l:last'
@@ -93,6 +95,11 @@ def cleanup():
 
     # kill it self
     # os.kill(PID, signal.SIGTERM)
+
+
+def download_folder(args):
+    with open(FIFO, 'w') as fifo:
+        fifo.write('\n'.join(args))
 
 
 def reload(args):
@@ -217,6 +224,17 @@ def preview_fifo():
             fp.write('\n'.join(output[:80]))
 
 
+def find_files(data):
+    """ Recursively find "files" and return them """
+    files = []
+    for k in data:
+        if isinstance(data[k], str):
+            files += [data[k]]
+        else:
+            files += find_files(data[k])
+    return files
+
+
 def main():
     global db, threads
     threads = list()
@@ -254,6 +272,16 @@ def main():
             data = [i.strip() for i in data.split('\n') if i]
 
         if len(data) == 0:
+            break
+
+        if 'download_folder' in data:
+            data = data[1:]
+            files = []
+            try:
+                for k in data:
+                    files += find_files(db[k])
+            except Exception as err:
+                print(err)
             break
 
         for k in data:
@@ -310,6 +338,8 @@ if __name__ == '__main__':
                 if i.is_alive():
                     # print(i.name)
                     i.join()
+    elif 'download_folder' in args:
+        download_folder(args)
     elif 'update' in args:
         script = os.path.join(ROOT, 'update.sh')
         sp.run(['bash', script])
@@ -317,3 +347,4 @@ if __name__ == '__main__':
         preview(args[1])
     elif 'reload' in args:
         reload(args[1:])
+

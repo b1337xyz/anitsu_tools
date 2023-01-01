@@ -21,7 +21,6 @@ ROOT = os.path.dirname(os.path.realpath(__file__))
 HOME = os.getenv('HOME')
 IMG_DIR = os.path.join(HOME, '.cache/anitsu_covers')
 DL_DIR = os.path.join(HOME, 'Downloads')
-DL_DIR = os.path.join('/mnt/anon/king/Anime')
 DB = os.path.join(HOME, '.local/share/anitsu_files.json')
 
 DL_FILE = '/tmp/anitsu'
@@ -29,7 +28,6 @@ PREVIEW_FIFO = '/tmp/anitsu.preview.fifo'
 FIFO = '/tmp/anitsu.fifo'
 FZF_PID = '/tmp/anitsu.fzf.pid'
 UB_FIFO = '/tmp/anitsu.ueberzug'
-# PID = os.getpid()
 RE_EXT = re.compile(r'.*\.(mkv|avi|mp4|webm|ogg|mov|rmvb|mpg|mpeg)$')
 
 FZF_ARGS = [
@@ -72,9 +70,6 @@ def fzf(args):
 
 def cleanup():
     """ Make sure that every FIFO dies and temporary files are deleted """
-
-    # os.system('clear')
-
     if os.path.exists(FZF_PID):
         try:
             with open(FZF_PID, 'r') as fp:
@@ -89,12 +84,6 @@ def cleanup():
             with open(i, 'w') as fp:
                 fp.write('')
             os.remove(i)
-
-    # kill ueberzug
-    # sp.run(['pkill', '-9', '-f', 'ueberzug'])
-
-    # kill it self
-    # os.kill(PID, signal.SIGTERM)
 
 
 def download_folder(args):
@@ -347,4 +336,3 @@ if __name__ == '__main__':
         preview(args[1])
     elif 'reload' in args:
         reload(args[1:])
-

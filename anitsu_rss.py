@@ -39,6 +39,7 @@ try:
         except Exception as err:
             rss = err_msg.format(err)
 
+        assert '<rss version' in rss
         with open(FILE, 'w') as fp:
             fp.write(rss)
 

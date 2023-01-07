@@ -33,13 +33,14 @@ RE_EXT = re.compile(r'.*\.(mkv|avi|mp4|webm|ogg|mov|rmvb|mpg|mpeg)$')
 FZF_ARGS = [
     '-m',
     '--border', 'none',
+    '--header', 'ctrl-d ctrl-a ctrl-g ctrl-t',
     '--preview', f'python3 {SCRIPT} preview {{}}',
     '--preview-window', 'left:52%:border-none',
     '--bind', f'enter:reload(python3 {SCRIPT} reload {{+}})+clear-query',
     '--bind', f'ctrl-d:execute(python3 {SCRIPT} download_folder {{+}})',
     '--bind', 'ctrl-a:toggle-all+last+toggle+first',
     '--bind', 'ctrl-g:first',
-    '--bind', 'ctrl-l:last'
+    '--bind', 'ctrl-t:last'
 ]
 
 
@@ -55,29 +56,31 @@ def get_psize(size):
 
 
 def fzf(args):
-    proc = sp.Popen(
-       ["fzf"] + FZF_ARGS,
-       stdin=sp.PIPE,
-       stdout=sp.PIPE,
-       universal_newlines=True
-    )
-    open(FZF_PID, 'w').write(str(proc.pid))
-    proc.communicate('\n'.join(args))
-    if proc.returncode != 0:
-        sleep(0.3)
-        cleanup()
+    try:
+        proc = sp.Popen(
+           ["fzf"] + FZF_ARGS,
+           stdin=sp.PIPE,
+           stdout=sp.PIPE,
+           universal_newlines=True
+        )
+        open(FZF_PID, 'w').write(str(proc.pid))
+        proc.communicate('\n'.join(args))
+    finally:
+        os.remove(FZF_PID)
 
 
 def cleanup():
     """ Make sure that every FIFO dies and temporary files are deleted """
+    sleep(0.3)
     if os.path.exists(FZF_PID):
         try:
             with open(FZF_PID, 'r') as fp:
                 pid = int(fp.read().strip())
             os.kill(pid, signal.SIGTERM)
+        except Exception as err:
+            print(err)
+        finally:
             os.remove(FZF_PID)
-        except Exception:
-            pass
 
     for i in [UB_FIFO, PREVIEW_FIFO, FIFO]:
         if os.path.exists(i):
@@ -295,12 +298,10 @@ def main():
         with open(FIFO, 'w') as fifo:
             fifo.write('\n'.join(output))
 
-    if os.path.exists(FIFO):
-        os.remove(FIFO)
+    os.remove(FIFO)
+    cleanup()
 
     if files:
-        cleanup()
-
         with open(DL_FILE, 'w') as fp:
             fp.write('\n'.join(url for url in files))
 

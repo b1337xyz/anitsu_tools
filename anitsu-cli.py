@@ -66,7 +66,7 @@ def fzf(args):
         open(FZF_PID, 'w').write(str(proc.pid))
         proc.communicate('\n'.join(args))
     finally:
-        os.remove(FZF_PID)
+        cleanup()
 
 
 def cleanup():
@@ -298,7 +298,8 @@ def main():
         with open(FIFO, 'w') as fifo:
             fifo.write('\n'.join(output))
 
-    os.remove(FIFO)
+    if os.path.exists(FIFO):
+        os.remove(FIFO)
     cleanup()
 
     if files:
@@ -323,10 +324,9 @@ if __name__ == '__main__':
             main()
         finally:
             print('\nbye')
-
             for i in threads:
                 if i.is_alive():
-                    # print(i.name)
+                    print(i.name)
                     i.join()
     elif 'download_folder' in args:
         download_folder(args)

@@ -22,12 +22,13 @@ HOME = os.getenv('HOME')
 IMG_DIR = os.path.join(HOME, '.cache/anitsu_covers')
 DL_DIR = os.path.join(HOME, 'Downloads')
 DB = os.path.join(HOME, '.local/share/anitsu_files.json')
+PID = os.getpid()
 
-DL_FILE = '/tmp/anitsu'
-PREVIEW_FIFO = '/tmp/anitsu.preview.fifo'
+DL_FILE = f'/tmp/anitsu.{PID}'
 FIFO = '/tmp/anitsu.fifo'
-FZF_PID = '/tmp/anitsu.fzf.pid'
-UB_FIFO = '/tmp/anitsu.ueberzug'
+PREVIEW_FIFO = '/tmp/anitsu.preview.fifo'
+UB_FIFO = '/tmp/anitsu.ueberzug.fifo'
+FZF_PID = '/tmp/anitsu.fzf'
 RE_EXT = re.compile(r'.*\.(mkv|avi|mp4|webm|ogg|mov|rmvb|mpg|mpeg)$')
 
 FZF_ARGS = [
@@ -65,8 +66,10 @@ def fzf(args):
         )
         open(FZF_PID, 'w').write(str(proc.pid))
         proc.communicate('\n'.join(args))
+    except KeyboardInterrupt:
+        pass
     finally:
-        cleanup()
+        cleanup()  # kill the preview
 
 
 def cleanup():
@@ -77,16 +80,23 @@ def cleanup():
             with open(FZF_PID, 'r') as fp:
                 pid = int(fp.read().strip())
             os.kill(pid, signal.SIGTERM)
-        except Exception as err:
-            print(err)
+        except Exception:
+            pass
         finally:
             os.remove(FZF_PID)
 
+    def kill(fifo):
+        if os.path.exists(fifo):
+            try:
+                with open(fifo, 'w') as fp:
+                    fp.write('')
+            finally:
+                os.remove(fifo)
+
     for i in [UB_FIFO, PREVIEW_FIFO, FIFO]:
-        if os.path.exists(i):
-            with open(i, 'w') as fp:
-                fp.write('')
-            os.remove(i)
+        t = Thread(target=kill, args=(i,))
+        t.start()
+        threads.append(t)
 
 
 def download_folder(args):
@@ -231,11 +241,9 @@ def main():
     global db, threads
     threads = list()
 
-    for i in [FIFO, UB_FIFO, PREVIEW_FIFO]:
+    for i in [PREVIEW_FIFO, FIFO]:
         if os.path.exists(i):
             os.remove(i)
-
-    for i in [PREVIEW_FIFO, FIFO]:
         os.mkfifo(i)
 
     if has_ueberzug:
@@ -300,7 +308,8 @@ def main():
 
     if os.path.exists(FIFO):
         os.remove(FIFO)
-    cleanup()
+
+    cleanup()  # kill fzf and the preview
 
     if files:
         with open(DL_FILE, 'w') as fp:
@@ -319,14 +328,16 @@ def main():
 
 if __name__ == '__main__':
     args = argv[1:]
+    threads = []
     if not args:
+        if os.path.exists(FIFO):
+            raise FileExistsError(FIFO)
         try:
             main()
         finally:
-            print('\nbye')
             for i in threads:
                 if i.is_alive():
-                    print(i.name)
+                    # print(i.name)
                     i.join()
     elif 'download_folder' in args:
         download_folder(args)

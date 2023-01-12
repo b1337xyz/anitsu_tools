@@ -49,12 +49,12 @@ async def main():
                 url = db[k]['image_url']
                 queue.put_nowait((url, image_path))
 
-            tasks = []
-            for _ in range(Q_SIZE):
-                tasks += [asyncio.create_task(download(queue))]
-            await queue.join()
-            for task in tasks:
-                task.cancel()
+        tasks = []
+        for _ in range(Q_SIZE):
+            tasks += [asyncio.create_task(download(queue))]
+        await queue.join()
+        for task in tasks:
+            task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
 
 

@@ -30,7 +30,7 @@ async def download(queue):
                         'convert', f'{image_path}[0]',
                         '-resize', '424x600>', image_path
                     ])
-            except:
+            except Exception:
                 os.remove(image_path)
         queue.task_done()
 
@@ -48,7 +48,7 @@ async def main():
             if not os.path.exists(image_path):
                 url = db[k]['image_url']
                 queue.put_nowait((url, image_path))
-            qsize = queue.qsize()
+
             tasks = []
             for _ in range(Q_SIZE):
                 tasks += [asyncio.create_task(download(queue))]

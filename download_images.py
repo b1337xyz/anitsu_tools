@@ -49,6 +49,8 @@ async def main():
                 url = db[k]['image_url']
                 queue.put_nowait((url, image_path))
 
+        qsize = queue.qsize()
+        print(f'{qsize} images to download, please wait...')
         tasks = []
         for _ in range(Q_SIZE):
             tasks += [asyncio.create_task(download(queue))]

@@ -66,7 +66,7 @@ async def google_drive(k, url):
     else:
         if '/file/' in url:
             ID = RE_GD_FILEID.search(url).group(2)
-        elif 'id=':
+        elif 'id=' in url:
             ID = RE_GD_FILEID.search(url).group(1)
 
         if not ID:

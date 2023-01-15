@@ -154,7 +154,7 @@ async def main():
         print(f'total pages: {total_pages}\ntotal posts: {total_posts}')
         await update_db(posts)
         queue = asyncio.Queue()
-        for p in range(2, total_pages+1):
+        for p in range(2, total_pages + 1):
             queue.put_nowait(p)
 
         tasks = []

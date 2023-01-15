@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-from urllib.parse import unquote
 import json
-import re
 import os
 
 HOME = os.getenv('HOME')
@@ -27,6 +25,7 @@ for k, v in db.items():
     for v2 in v['gdrive'].values():
         files[s].update(v2)
 
+
 def count(data):
     t = 0
     for k in data:
@@ -35,6 +34,7 @@ def count(data):
         else:
             t += count(data[k])
     return t
+
 
 print(count(files))
 

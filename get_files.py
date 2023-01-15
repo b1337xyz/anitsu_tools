@@ -38,7 +38,7 @@ def set_value(root, path, value):
 def parse_size(size):
     unit = size[-1]
     number = size[:-1]
-    return int(float(number)*UNITS[unit])
+    return int(float(number) * UNITS[unit])
 
 
 async def google_drive(k, url):
@@ -108,7 +108,7 @@ async def google_drive(k, url):
                 # size = re.search(r' \(((?:\d+|\d+\.\d+)[BMKGT])\)</span>', out).group(1)
                 filename, size = re.search(
                     r'href\=\"\/open.*?>([^<]+)\<\/a\> \((\d+.)\)', out
-                ).group(1,2)
+                ).group(1, 2)
 
                 # https://stackoverflow.com/questions/42865724/parse-human-readable-filesizes-into-bytes
                 size = parse_size(size)

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 from aiohttp import ClientSession, BasicAuth
 from urllib.parse import unquote
+from html import unescape
 from collections import defaultdict
 from xml.dom import minidom
-import subprocess as sp
+from shutil import which
 import random
 import asyncio
 import json
@@ -14,7 +15,10 @@ HOME = os.getenv('HOME')
 DB = os.path.join(HOME, '.cache/anitsu.json')
 Q_SIZE = 20
 MAX_ATTEMPTS = 3
-RE_GD_FILEID = re.compile(r'(?:/folders/([^\?$/]*)|[\?&]id=([^&$]*)|/file/d/([^/\?$]*))')
+RE_GD_FOLDERID = re.compile(r'/folders/([^\?$/]*)')
+RE_GD_FILEID = re.compile(r'(?:[\?&]id=([^&$]*)|/file/d/([^/\?$]*))')
+UNITS = {"B": 1, "K": 10**3, "M": 10**6, "G": 10**9, "T": 10**12}
+USE_GDRIVE = which('gdrive')
 
 
 async def random_sleep():
@@ -31,31 +35,91 @@ def set_value(root, path, value):
     root[path[-1]] = value
 
 
+def parse_size(size):
+    unit = size[-1]
+    number = size[:-1]
+    return int(float(number)*UNITS[unit])
+
+
 async def google_drive(k, url):
-    try:
-        FILEID = RE_GD_FILEID.search(url).group(1)
-    except Exception as err:
-        print(f'FILEID not found: {url}', err)
-        return
+    if '/folders/' in url:
+        ID = RE_GD_FOLDERID.search(url).group(1)
+        try:
+            p = await asyncio.create_subprocess_shell(' '.join([
+                'rclone', 'lsjson', '-R', '--files-only',
+                '--no-modtime', '--no-mimetype',
+                '--drive-root-folder-id', ID, 'Anitsu:'
+            ]), stdout=asyncio.subprocess.PIPE)
+            stdout, _ = await p.communicate()
+            data = json.loads(stdout.decode())
+        except Exception as err:
+            print(f'Key: {k}, Error: {err}\n{url}')
+            return
 
-    try:
-        out = sp.run([
-            'rclone', 'lsjson', '-R', '--files-only',
-            '--no-modtime', '--no-mimetype',
-            '--drive-root-folder-id', FILEID, 'Anitsu:'
-        ], stdout=sp.PIPE).stdout.decode()
-        data = json.loads(out)
-    except Exception as err:
-        print(f'Error: {err}')
-        return
+        root = tree()
+        for file in data:
+            size = file['Size']
+            dl_link = f'https://drive.google.com/uc?id={file["ID"]}&export=download&confirm=t'
+            path = file['Path'].split('/')
+            path[-1] = f'{path[-1]} (size-{size})'
+            set_value(root, path, dl_link)
+    else:
+        if '/file/' in url:
+            ID = RE_GD_FILEID.search(url).group(2)
+        elif 'id=':
+            ID = RE_GD_FILEID.search(url).group(1)
 
-    root = tree()
-    for file in data:
-        size = file['Size']
-        dl_link = f'https://drive.google.com/u/0/uc?id={file["ID"]}&export=download&confirm=t'
-        path = file['Path'].split('/')
-        path[-1] = f'{path[-1]} (size-{size})'
-        set_value(root, path, dl_link)
+        if not ID:
+            print(f'ID not found: {url}')
+            return
+
+        if USE_GDRIVE:
+            # if you know how to do this with rclone please tell me T_T
+            try:
+                p = await asyncio.create_subprocess_shell(' '.join([
+                    'gdrive', 'info', '--bytes', ID
+                ]), stdout=asyncio.subprocess.PIPE)
+                stdout, _ = await p.communicate()
+                stdout = stdout.decode()
+            except Exception as err:
+                print(f'Key: {k}, Error: {err}\n{url}')
+                return
+
+            root = tree()
+            try:
+                filename = re.search(r'(?:^|\n)Name: ([^\n]*)', stdout).group(1)
+                size = re.search(r'(?:^|\n)Size: (\d+)', stdout).group(1)
+                dl_link = re.search(r'(?:^|\n)DownloadUrl: ([^\n]*)', stdout).group(1)
+            except Exception as err:
+                print(f'Key: {k}, Error: {err}\n{url}')
+                return
+            filename = f'{filename} (size-{size})'
+        else:
+            url = f'https://drive.google.com/uc?id={ID}&export=download'
+            async with session.get(url) as r:
+                out = await r.text()
+
+            if 'Too many users have viewed or downloaded this file recently' in out:
+                print('429')
+                return
+
+            try:
+                # filename = re.search(r'>([^<]*\.(?:mkv|mp4|avi))', out).group(1)
+                # size = re.search(r' \(((?:\d+|\d+\.\d+)[BMKGT])\)</span>', out).group(1)
+                filename, size = re.search(
+                    r'href\=\"\/open.*?>([^<]+)\<\/a\> \((\d+.)\)', out
+                ).group(1,2)
+
+                # https://stackoverflow.com/questions/42865724/parse-human-readable-filesizes-into-bytes
+                size = parse_size(size)
+            except Exception as err:
+                print(out)
+                print(f'Key: {k}, Error: {err}\n{url}')
+                return
+
+        dl_link = f'https://drive.google.com/uc?id={ID}&export=download&confirm=t'
+        filename = f'{unescape(filename)} (size-{size})'
+        root[filename] = dl_link
 
     # print(json.dumps(root, indent=2))
     db[k]['gdrive'][url] = root

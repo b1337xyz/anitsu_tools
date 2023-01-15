@@ -10,25 +10,31 @@ import re
 
 # orderby = author, date, id, modified, relevance, slug, title, rand
 
-USER = '' # anitsu login user and password
+USER = ''  # anitsu login user and password
 PASS = ''
 HOME = os.getenv('HOME')
 ROOT = os.path.realpath(os.path.dirname(__file__))
 LAST_RUN = os.path.join(ROOT, '.last_run')
 DB = os.path.join(HOME, '.cache/anitsu.json')
 IMG_DIR = os.path.join(HOME, '.cache/anitsu_covers')
-WP_URL =  'https://anitsu.moe/wp-json/wp/v2/posts?per_page=100&page={}&modified_after={}&_fields=id,date,modified,link,title,content'
-RE_IMG  = re.compile(r'src=\"([^\"]*\.(?:png|jpe?g|webp|gif))')
-RE_MAL  = re.compile(r'myanimelist\.net/\w*/(\d*)')
-RE_ANI  = re.compile(r'anilist\.co/\w*/(\d*)')
-RE_GDR  = re.compile(r'href=\"(https://drive\.google[^\"]*)')
+WP_URL = 'https://anitsu.moe/wp-json/wp/v2/posts?per_page=100&page={}\
+&modified_after={}&_fields=id,date,modified,link,title,content'
+RE_IMG = re.compile(r'src=\"([^\"]*\.(?:png|jpe?g|webp|gif))')
+RE_MAL = re.compile(r'myanimelist\.net/\w*/(\d*)')
+RE_ANI = re.compile(r'anilist\.co/\w*/(\d*)')
+RE_NXC = re.compile(r'//([^/]*/nextcloud/\w/[^\?\"]+)')
+RE_GDR = re.compile(r'href=\"(https://drive\.google[^\"]*)')
 RE_PASS = re.compile(r'Senha: <span[^>]*>(.*)</span')
 MAX_ATTEMPTS = 3
 Q_SIZE = 10
 NOW = datetime.isoformat(datetime.now())
+RED = '\033[1;31m'
+GRN = '\033[1;32m'
+END = '\033[m'
 
 
-clean_text = lambda s: unescape(s).encode('ascii', 'ignore').decode().strip()
+def clean_text(s):
+    return unescape(s).encode('ascii', 'ignore').decode().strip()
 
 
 def regex(expr, text):
@@ -45,45 +51,53 @@ async def random_sleep():
 async def update_db(posts):
     global db
     for post in posts:
-        post_id  = str(post['id'])
+        post_id = str(post['id'])
         modified = post['modified']
-        content  = post['content']['rendered']
-        title    = clean_text(post['title']['rendered'])
+        content = post['content']['rendered']
+        title = clean_text(post['title']['rendered'])
 
         if post_id not in db:
-            print(f'[{modified}] {title}')
+            print(f'[{GRN}{modified}{END}] {title}')
             db[post_id] = dict()
             db[post_id]['nextcloud'] = dict()
+            db[post_id]['gdrive'] = dict()
 
         if 'modified' in db[post_id]:
             mod = db[post_id]['modified']
             if modified != mod:
-                print(f'[\033[1;31m{mod}\033[m > \033[1;32m{modified}\033[m] {title}')
+                print(f'[{RED}{mod}{END} > {GRN}{modified}{END}] {title}')
                 db[post_id]['nextcloud'] = dict()
+                db[post_id]['gdrive'] = dict()
 
         pw = RE_PASS.search(content)
         pw = '' if not pw else pw.group(1)
-
         if pw:
-            print(f'\033[1;31mPassword: {pw}\033[m')
+            print(f'{RED}Password: {pw}{END}')
 
-        db[post_id]['password']   = pw
-        db[post_id]['title']      = title
-        db[post_id]['url']        = post['link']
-        db[post_id]['date']       = post['date']
-        db[post_id]['modified']   = modified
+        db[post_id]['password'] = pw
+        db[post_id]['title'] = title
+        db[post_id]['url'] = post['link']
+        db[post_id]['date'] = post['date']
+        db[post_id]['modified'] = modified
         db[post_id]['is_release'] = '[em lançamento' in content.lower()
-        db[post_id]['image']      = os.path.join(IMG_DIR, f'{post_id}.jpg')
-        db[post_id]['image_url']  = regex(RE_IMG, content)
-        db[post_id]['malid']      = regex(RE_MAL, content)
-        db[post_id]['anilist']    = regex(RE_ANI, content)
-        db[post_id]['gdrive']     = regex(RE_GDR, content)
-        links = re.findall(r'//([^/]*/nextcloud/\w/[^\?\"]+)', content)
-        for i in links:
+        db[post_id]['image'] = os.path.join(IMG_DIR, f'{post_id}.jpg')
+        db[post_id]['image_url'] = regex(RE_IMG, content)
+        db[post_id]['malid'] = regex(RE_MAL, content)
+        db[post_id]['anilist'] = regex(RE_ANI, content)
+
+        nextcloud_links = RE_NXC.findall(content)
+        has_files = bool(nextcloud_links)
+        for i in nextcloud_links:
             if i not in db[post_id]['nextcloud']:
                 db[post_id]['nextcloud'][i] = dict()
 
-        if not db[post_id]['nextcloud']:
+        gdrive_links = RE_GDR.findall(content)
+        has_files = bool(gdrive_links) if not has_files else has_files
+        for i in gdrive_links:
+            if i not in db[post_id]['gdrive']:
+                db[post_id]['gdrive'][i] = dict()
+
+        if not has_files:
             # https://anitsu.moe/wp-json/wp/v2/posts?include={post_id}
             print(f'nothing found, post {post_id} deleted')
             del db[post_id]
@@ -101,7 +115,7 @@ async def get_posts(queue):
                         posts = await r.json()
                         break
             except Exception as err:
-                print(f'\033[1;31m{err}\033[m\n{url}')
+                print(f'{RED}{err}{END}\n{url}')
             att += 1
             await random_sleep()
         await update_db(posts)

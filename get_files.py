@@ -3,6 +3,7 @@ from aiohttp import ClientSession, BasicAuth
 from urllib.parse import unquote
 from collections import defaultdict
 from xml.dom import minidom
+import subprocess as sp
 import random
 import asyncio
 import json
@@ -13,6 +14,7 @@ HOME = os.getenv('HOME')
 DB = os.path.join(HOME, '.cache/anitsu.json')
 Q_SIZE = 20
 MAX_ATTEMPTS = 3
+RE_GD_FILEID = re.compile(r'(?:/folders/([^\?$/]*)|[\?&]id=([^&$]*)|/file/d/([^/\?$]*))')
 
 
 async def random_sleep():
@@ -27,6 +29,36 @@ def set_value(root, path, value):
     for d in path[:-1]:
         root = root[unquote(d)]
     root[path[-1]] = value
+
+
+async def google_drive(k, url):
+    try:
+        FILEID = RE_GD_FILEID.search(url).group(1)
+    except Exception as err:
+        print(f'FILEID not found: {url}', err)
+        return
+
+    try:
+        out = sp.run([
+            'rclone', 'lsjson', '-R', '--files-only',
+            '--no-modtime', '--no-mimetype',
+            '--drive-root-folder-id', FILEID, 'Anitsu:'
+        ], stdout=sp.PIPE).stdout.decode()
+        data = json.loads(out)
+    except Exception as err:
+        print(f'Error: {err}')
+        return
+
+    root = tree()
+    for file in data:
+        size = file['Size']
+        dl_link = f'https://drive.google.com/u/0/uc?id={file["ID"]}&export=download&confirm=t'
+        path = file['Path'].split('/')
+        path[-1] = f'{path[-1]} (size-{size})'
+        set_value(root, path, dl_link)
+
+    # print(json.dumps(root, indent=2))
+    db[k]['gdrive'][url] = root
 
 
 async def nextcloud(k, url, password=''):
@@ -96,7 +128,12 @@ async def q_handler(queue: asyncio.Queue):
         pw = ''
         if 'password' in db[k]:
             pw = db[k]['password']
-        await nextcloud(k, url, pw)
+
+        if '/nextcloud/' in url:
+            await nextcloud(k, url, pw)
+        elif 'drive.google' in url:
+            await google_drive(k, url)
+
         await random_sleep()
         queue.task_done()
 
@@ -111,6 +148,9 @@ async def main():
         for k, v in db.items():
             for url in v['nextcloud']:
                 if not v['nextcloud'][url] or db[k]['is_release']:
+                    queue.put_nowait((k, url))
+            for url in v['gdrive']:
+                if not v['gdrive'][url] or db[k]['is_release']:
                     queue.put_nowait((k, url))
 
         qsize = queue.qsize()

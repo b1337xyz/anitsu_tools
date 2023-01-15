@@ -23,6 +23,8 @@ for k, v in db.items():
     files[s] = dict()
     for v2 in v['nextcloud'].values():
         files[s].update(v2)
+    for v2 in v['gdrive'].values():
+        files[s].update(v2)
 
 def count(data):
     t = 0

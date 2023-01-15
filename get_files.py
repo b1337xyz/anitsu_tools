@@ -100,7 +100,7 @@ async def google_drive(k, url):
                 out = await r.text()
 
             if 'Too many users have viewed or downloaded this file recently' in out:
-                print('429')
+                print(f'429, {url}')
                 return
 
             try:

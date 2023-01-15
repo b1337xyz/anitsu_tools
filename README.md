@@ -8,5 +8,6 @@
 - [aiohttp](https://github.com/aio-libs/aiohttp)
 - [aiofiles](https://github.com/Tinche/aiofiles) dependency for `download_images.py`
 - [ueberzug](https://github.com/b1337xyz/ueberzug) (optional) for `anitsu-cli.py` image support
+- [gdrive](https://github.com/prasmussen/gdrive) (optional)
 
 ![gif](anitsu-cli.demo.gif)

@@ -2,7 +2,8 @@
 
 set -xe
 
-cd ~/.scripts/python/anitsu || exit 1
+root=$(realpath "$0") root=${root%/*}
+cd "$root" || exit 1
 
 ./get_posts.py
 ./get_files.py

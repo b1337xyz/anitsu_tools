@@ -16,10 +16,13 @@
 ---
 ### Setup
 
+#### Make sure you have `imagemagick` and `rclone` installed
 ```
 git clone https://github.com/b1337xyz/anitsu_tools.git
 cd anitsu_tools
 python3 -m pip install -U --user -r requirements.txt
+chmod +x update.sh
+./update.sh
 ```
 ### Rclone setup
 

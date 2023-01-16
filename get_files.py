@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env pythonc
 from aiohttp import ClientSession, BasicAuth
 from urllib.parse import unquote
 from html import unescape
@@ -46,8 +46,8 @@ async def google_drive(k, url):
         ID = RE_GD_FOLDERID.search(url).group(1)
         try:
             p = await asyncio.create_subprocess_shell(' '.join([
-                'rclone', 'lsjson', '-R', '--files-only',
-                '--no-modtime', '--no-mimetype',
+                'rclone', 'lsjson', '-R', '--fast-list',
+                '--files-only', '--no-modtime', '--no-mimetype',
                 '--drive-root-folder-id', ID, 'Anitsu:'
             ]), stdout=asyncio.subprocess.PIPE)
             stdout, _ = await p.communicate()

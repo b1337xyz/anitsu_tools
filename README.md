@@ -14,7 +14,7 @@
     - [rclone](https://rclone.org) get files from google drive folders (`get_files.py`)
     - [gdrive](https://github.com/prasmussen/gdrive) (optional) for more accurate results from google drive links (`get_files.py`)
 ---
-> Setup
+### Setup
 
 ```
 git clone https://github.com/b1337xyz/anitsu_tools.git

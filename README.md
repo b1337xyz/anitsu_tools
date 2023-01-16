@@ -102,4 +102,5 @@ chmod +x update.sh
 ./update.sh
 ```
 ---
+### What you can do with this...
 ![gif](anitsu-cli.demo.gif)

@@ -18,7 +18,8 @@ MAX_ATTEMPTS = 3
 RE_GD_FOLDERID = re.compile(r'/folders/([^\?$/]*)')
 RE_GD_FILEID = re.compile(r'(?:[\?&]id=([^&$]*)|/file/d/([^/\?$]*))')
 UNITS = {"B": 1, "K": 10**3, "M": 10**6, "G": 10**9, "T": 10**12}
-USE_GDRIVE = which('gdrive')
+HAS_GDRIVE = which('gdrive')
+HAS_RCLONE = which('rclone')
 
 
 async def random_sleep():
@@ -42,7 +43,7 @@ def parse_size(size):
 
 
 async def google_drive(k, url):
-    if '/folders/' in url:
+    if '/folders/' in url and HAS_RCLONE:
         ID = RE_GD_FOLDERID.search(url).group(1)
         try:
             p = await asyncio.create_subprocess_shell(' '.join([
@@ -73,7 +74,7 @@ async def google_drive(k, url):
             print(f'ID not found: {url}')
             return
 
-        if USE_GDRIVE:
+        if HAS_GDRIVE:
             # if you know how to do this with rclone please tell me T_T
             try:
                 p = await asyncio.create_subprocess_shell(' '.join([

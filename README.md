@@ -16,7 +16,7 @@
 ---
 ### Setup
 
-#### Make sure you have `imagemagick` and `rclone` installed
+Make sure you have `imagemagick` and `rclone` installed
 ```
 git clone https://github.com/b1337xyz/anitsu_tools.git
 cd anitsu_tools

@@ -14,7 +14,7 @@
     - [rclone](https://rclone.org) get files from google drive folders (`get_files.py`)
     - [gdrive](https://github.com/prasmussen/gdrive) (optional) for more accurate results from google drive links (`get_files.py`)
 ---
-### Rclone setup
+### Setup
 
 <details>
     <summary>Make a remote called Anitsu</summary>
@@ -92,8 +92,6 @@
 
 Recommended: [Making your own client_id](https://rclone.org/drive/#making-your-own-client-id)
 </details>
-
-### Setup
 
 > Make sure you have `imagemagick` and `rclone` installed
 ```

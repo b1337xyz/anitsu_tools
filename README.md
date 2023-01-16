@@ -9,7 +9,7 @@
     - [ueberzug](https://github.com/b1337xyz/ueberzug) (optional) for `anitsu-cli.py` image support
 - programs
     - [aria2](https://aria2.github.io/) download utility
-    - [fzf](https://github.com/junegunn/fzf) `anitsu-cli.py`
+    - [fzf](https://github.com/junegunn/fzf) (`anitsu-cli.py`)
     - [imagemagick](https://github.com/ImageMagick/ImageMagick) converts images to jpeg in `download_images.py`
     - [rclone](https://rclone.org) get files from google drive folders (`get_files.py`)
     - [gdrive](https://github.com/prasmussen/gdrive) (optional) for more accurate results from google drive links (`get_files.py`)

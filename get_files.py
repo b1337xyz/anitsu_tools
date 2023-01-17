@@ -1,4 +1,4 @@
-#!/usr/bin/env pythonc
+#!/usr/bin/env python3
 from aiohttp import ClientSession, BasicAuth
 from urllib.parse import unquote
 from html import unescape

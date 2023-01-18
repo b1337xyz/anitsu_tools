@@ -74,7 +74,7 @@ def fzf(args):
 
 def cleanup():
     """ Make sure that every FIFO dies and temporary files are deleted """
-    sleep(0.3)
+    sleep(0.5)
     if os.path.exists(FZF_PID):
         try:
             with open(FZF_PID, 'r') as fp:

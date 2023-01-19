@@ -21,7 +21,9 @@
 
     ```
     rclone config
+    ```
 
+    ```
     n) New remote
     r) Rename remote
     c) Copy remote

@@ -13,7 +13,7 @@ DL_DIR = os.path.join(HOME, 'Downloads')
 WEBDAV = "cloud.anitsu.moe/nextcloud/public.php/webdav"
 RE_USER = re.compile(r'/nextcloud/\w/([^\?/]*)')
 
-usage  = 'Usage: %prog [options] <URL>'
+usage = 'Usage: %prog [options] <URL>'
 parser = OptionParser(usage=usage)
 parser.add_option('-p', '--password', type='string', default='')
 parser.add_option('-d', '--dir', type='string', default=DL_DIR)
@@ -50,6 +50,6 @@ for url in args:
             '--dir', opts.dir, f'--input-file={tmpfile}'
         ])
     except KeyboardInterrupt:
-        pass
+        break
     finally:
         os.remove(tmpfile)

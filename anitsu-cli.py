@@ -59,10 +59,10 @@ def get_psize(size):
 def fzf(args):
     try:
         proc = sp.Popen(
-           ["fzf"] + FZF_ARGS,
-           stdin=sp.PIPE,
-           stdout=sp.PIPE,
-           universal_newlines=True
+            ["fzf"] + FZF_ARGS,
+            stdin=sp.PIPE,
+            stdout=sp.PIPE,
+            universal_newlines=True
         )
         open(FZF_PID, 'w').write(str(proc.pid))
         proc.communicate('\n'.join(args))

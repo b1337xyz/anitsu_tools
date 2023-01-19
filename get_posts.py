@@ -2,6 +2,7 @@
 from datetime import datetime
 from aiohttp import ClientSession, BasicAuth
 from html import unescape
+from getpass import getpass
 import asyncio
 import json
 import os
@@ -10,10 +11,9 @@ import re
 
 # orderby = author, date, id, modified, relevance, slug, title, rand
 
-USER = ''  # anitsu login user and password
-PASS = ''
 HOME = os.getenv('HOME')
 ROOT = os.path.realpath(os.path.dirname(__file__))
+CONFIG = os.path.join(ROOT, '.config')
 LAST_RUN = os.path.join(ROOT, '.last_run')
 DB = os.path.join(HOME, '.cache/anitsu.json')
 IMG_DIR = os.path.join(HOME, '.cache/anitsu_covers')
@@ -31,6 +31,20 @@ NOW = datetime.isoformat(datetime.now())
 RED = '\033[1;31m'
 GRN = '\033[1;32m'
 END = '\033[m'
+
+
+def get_auth():
+    try:
+        with open(CONFIG, 'r') as fp:
+            config = json.load(fp)
+    except FileNotFoundError:
+        config = {
+            'user': input('User: ').strip(),
+            'passwd': getpass()
+        }
+        with open(CONFIG, 'w') as fp:
+            json.dump(config, fp)
+    return config['user'], config['passwd']
 
 
 def clean_text(s):
@@ -139,7 +153,8 @@ async def main():
 
     open(LAST_RUN, 'w').write(NOW)
 
-    auth = BasicAuth(USER, PASS)
+    user, passwd = get_auth()
+    auth = BasicAuth(user, passwd)
     async with ClientSession(auth=auth) as session:
         print('requesting first page, please wait...')
         url = WP_URL.format(1, last_run)

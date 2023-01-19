@@ -20,7 +20,7 @@ async def download(queue):
                 await f.write(await resp.read())
                 await f.close()
             else:
-                print(f'error {resp.status}, {url}')
+                print(f'error: {resp.status}, {url}')
 
         if os.path.exists(image_path):
             try:

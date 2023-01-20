@@ -29,7 +29,7 @@ FIFO = '/tmp/anitsu.fifo'
 PREVIEW_FIFO = '/tmp/anitsu.preview.fifo'
 UB_FIFO = '/tmp/anitsu.ueberzug.fifo'
 FZF_PID = '/tmp/anitsu.fzf'
-RE_EXT = re.compile(r'.*\.(mkv|avi|mp4|webm|ogg|mov|rmvb|mpg|mpeg)$')
+RE_EXT = re.compile(r'.*\.(?:mkv|avi|mp4|webm|ogg|mov|rmvb|mpg|mpeg)$')
 
 FZF_ARGS = [
     '-m',

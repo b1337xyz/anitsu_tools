@@ -17,7 +17,7 @@ except ImportError:
     pass
 
 SCRIPT = os.path.realpath(__file__)
-ROOT = os.path.dirname(os.path.realpath(__file__))
+ROOT = os.path.dirname(SCRIPT)
 HOME = os.getenv('HOME')
 IMG_DIR = os.path.join(HOME, '.cache/anitsu_covers')
 DL_DIR = os.path.join(HOME, 'Downloads')
@@ -91,7 +91,10 @@ def cleanup():
                 with open(fifo, 'w') as fp:
                     fp.write('')
             finally:
-                os.remove(fifo)
+                try:
+                    os.remove(fifo)
+                except Exception:
+                    print(f'failed to remove fifo: {fifo}')
 
     for i in [UB_FIFO, PREVIEW_FIFO, FIFO]:
         t = Thread(target=kill, args=(i,))

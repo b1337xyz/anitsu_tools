@@ -72,9 +72,8 @@ def fzf(args):
         cleanup()  # kill the preview
 
 
-def cleanup():
-    """ Make sure that every FIFO dies and temporary files are deleted """
-    sleep(0.5)
+def kill_fzf():
+    sleep(0.3)
     if os.path.exists(FZF_PID):
         try:
             with open(FZF_PID, 'r') as fp:
@@ -85,16 +84,17 @@ def cleanup():
         finally:
             os.remove(FZF_PID)
 
+
+def cleanup():
+    """ Make sure that every FIFO dies and temporary files are deleted """
     def kill(fifo):
         if os.path.exists(fifo):
+            with open(fifo, 'w') as fp:
+                fp.write('')
             try:
-                with open(fifo, 'w') as fp:
-                    fp.write('')
-            finally:
-                try:
-                    os.remove(fifo)
-                except Exception:
-                    print(f'failed to remove fifo: {fifo}')
+                os.remove(fifo)
+            except FileNotFoundError:
+                pass
 
     for i in [UB_FIFO, PREVIEW_FIFO, FIFO]:
         t = Thread(target=kill, args=(i,))
@@ -141,16 +141,16 @@ def preview(arg):
     total = 0
     data = sorted(data, key=lambda x: isinstance(
         re.match(r'.*\(size-\d+\)', x), re.Match
-    ))
+    ))  # directories first
     for i in range(len(data)):
         s = data[i].strip()
         try:
-            size = re.search(r' \(size-(\d+)\)$', s).group(1)
-            total += int(size)
-            size = get_psize(int(size))
+            size = int(re.search(r' \(size-(\d+)\)$', s).group(1))
+            total += size
+            size = get_psize(size)
             s = re.sub(r' \((?:size|post)-.*$', '', s)
             s = f'{size:<9} \033[1;35m{s}\033[m'
-        except AttributeError:
+        except AttributeError:  # is a directory
             s = re.sub(r' \((?:size|post)-.*$', '', s)
             s = f'\033[1;34m{s}\033[m'
         data[i] = s
@@ -309,10 +309,12 @@ def main():
         with open(FIFO, 'w') as fifo:
             fifo.write('\n'.join(output))
 
+    open('test', 'w').close()
+
     if os.path.exists(FIFO):
         os.remove(FIFO)
 
-    cleanup()  # kill fzf and the preview
+    kill_fzf()  # kill fzf and the preview
 
     if files:
         with open(DL_FILE, 'w') as fp:
@@ -335,13 +337,15 @@ if __name__ == '__main__':
     if not args:
         if os.path.exists(FIFO):
             raise FileExistsError(FIFO)
+
         try:
             main()
         finally:
             for i in threads:
                 if i.is_alive():
-                    # print(i.name)
+                    print(i.name)
                     i.join()
+
     elif 'download_folder' in args:
         download_folder(args)
     elif 'update' in args:

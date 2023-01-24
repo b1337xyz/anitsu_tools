@@ -43,7 +43,7 @@ def get_auth():
             'passwd': getpass()
         }
         with open(CONFIG, 'w') as fp:
-            json.dump(config, fp)
+            json.dump(config, fp, indent=4)
     return config['user'], config['passwd']
 
 
@@ -158,7 +158,11 @@ async def main():
     async with ClientSession(auth=auth) as session:
         print('requesting first page, please wait...')
         url = WP_URL.format(1, last_run)
-        async with session.get(url) as r:
+        async with session.get(url, timeout=30) as r:
+            if r.status != 200:
+                print(f'{r.status}, check your user and password')
+                __import__('sys').exit(1)
+
             total_pages = int(r.headers['x-wp-totalpages'])
             total_posts = int(r.headers['x-wp-total'])
             posts = await r.json()

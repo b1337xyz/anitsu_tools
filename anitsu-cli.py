@@ -309,8 +309,6 @@ def main():
         with open(FIFO, 'w') as fifo:
             fifo.write('\n'.join(output))
 
-    open('test', 'w').close()
-
     if os.path.exists(FIFO):
         os.remove(FIFO)
 

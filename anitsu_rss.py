@@ -6,8 +6,10 @@ import requests
 
 URL = 'https://anitsu.moe/feed/'
 HOME = os.getenv('HOME')
-FILE = os.path.join(HOME, '.cache/anitsu.rss')
-COOKIE_FILE = os.path.join(HOME, '.config/anitsu.cookie')
+CACHE_HOME = os.getenv('XDG_CACHE_HOME', os.path.join(HOME, '.cache'))
+CONFIG_HOME = os.getenv('XDG_CONFIG_HOME', os.path.join(HOME, '.config'))
+FILE = os.path.join(CACHE_HOME, 'anitsu.rss')
+COOKIE_FILE = os.path.join(CONFIG_HOME, 'anitsu.cookie')
 INTERVAL = 15 * 60
 
 with open(COOKIE_FILE, 'r') as fp:

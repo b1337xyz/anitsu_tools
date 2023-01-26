@@ -18,25 +18,18 @@ except ImportError:
 
 SCRIPT = os.path.realpath(__file__)
 ROOT = os.path.dirname(SCRIPT)
+IMG_DIR = os.path.join(ROOT, 'covers')
+DB = os.path.join(ROOT, 'anitsu_files.json')
 HOME = os.getenv('HOME')
-IMG_DIR = os.path.join(HOME, '.cache/anitsu_covers')
 DL_DIR = os.path.join(HOME, 'Downloads')
-DB = os.path.join(HOME, '.local/share/anitsu_files.json')
 PID = os.getpid()
-
-DL_FILE = os.path.join(ROOT, f'.anitsu.{PID}')
+DL_FILE = os.path.join(f'/tmp/anitsu.{PID}')
 FIFO = '/tmp/anitsu.fifo'
 PREVIEW_FIFO = '/tmp/anitsu.preview.fifo'
 UB_FIFO = '/tmp/anitsu.ueberzug.fifo'
 FZF_PID = '/tmp/anitsu.fzf'
 RE_EXT = re.compile(r'.*\.(?:mkv|avi|mp4|webm|ogg|mov|rmvb|mpg|mpeg)$')
-ARIA2_SESSION = os.path.join(ROOT, '.session')
-ARIA2_ARGS = [
-    '-j', '2',
-    '--save-session', ARIA2_SESSION,
-    '--save-session-interval', '30'
-]
-LOG = os.path.join(ROOT, 'log')
+ARIA2_ARGS = ['-j', '2']
 
 FZF_ARGS = [
     '-m', '--cycle',

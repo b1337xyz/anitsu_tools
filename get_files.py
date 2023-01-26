@@ -11,8 +11,9 @@ import json
 import re
 import os
 
-HOME = os.getenv('HOME')
-DB = os.path.join(HOME, '.cache/anitsu.json')
+ROOT = os.path.realpath(os.path.dirname(__file__))
+DB = os.path.join(ROOT, 'anitsu.json')
+
 Q_SIZE = 20
 MAX_ATTEMPTS = 3
 RE_GD_FOLDERID = re.compile(r'/folders/([^\?$/]*)')

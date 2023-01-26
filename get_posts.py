@@ -9,14 +9,12 @@ import os
 import random
 import re
 
-# orderby = author, date, id, modified, relevance, slug, title, rand
-
-HOME = os.getenv('HOME')
 ROOT = os.path.realpath(os.path.dirname(__file__))
+DB = os.path.join(ROOT, 'anitsu.json')
 CONFIG = os.path.join(ROOT, '.config')
+IMG_DIR = os.path.join(ROOT, 'covers')
 LAST_RUN = os.path.join(ROOT, '.last_run')
-DB = os.path.join(HOME, '.cache/anitsu.json')
-IMG_DIR = os.path.join(HOME, '.cache/anitsu_covers')
+
 WP_URL = 'https://anitsu.moe/wp-json/wp/v2/posts?per_page=100&page={}\
 &modified_after={}&_fields=id,date,modified,link,title,content'
 RE_IMG = re.compile(r'src=\"([^\"]*\.(?:png|jpe?g|webp|gif))')

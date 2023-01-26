@@ -2,9 +2,9 @@
 import json
 import os
 
-HOME = os.getenv('HOME')
-DB = os.path.join(HOME, '.cache/anitsu.json')
-OUTPUT = os.path.join(HOME, '.local/share/anitsu_files.json')
+ROOT = os.path.realpath(os.path.dirname(__file__))
+DB = os.path.join(ROOT, 'anitsu.json')
+OUTPUT = os.path.join(ROOT, 'anitsu_files.json')
 
 with open(DB, 'r') as fp:
     db = json.load(fp)
@@ -13,11 +13,6 @@ files = dict()
 for k, v in db.items():
     title = db[k]['title']
     s = f'{title} (post-{k})'
-    # c = 1
-    # s = title
-    # while s in files:
-    #     s = f'{title}.{c}'
-    #     c += 1
     files[s] = dict()
     for v2 in v['nextcloud'].values():
         files[s].update(v2)
@@ -37,7 +32,6 @@ def count(data):
 
 
 print(count(files))
-
 files = {k: files[k] for k in sorted(list(files.keys()))}
 with open(OUTPUT, 'w') as fp:
     json.dump(files, fp)

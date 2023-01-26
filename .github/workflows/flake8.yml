@@ -1,4 +1,4 @@
-name: anitsu_tools test_00
+name: Dependencies and flake8 check
 
 on: [push]
 

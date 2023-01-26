@@ -39,14 +39,14 @@ ARIA2_ARGS = [
 LOG = os.path.join(ROOT, 'log')
 
 FZF_ARGS = [
-    '-m',
+    '-m', '--cycle',
     '--border', 'none',
     '--header', 'ctrl-d ctrl-a ctrl-g ctrl-t shift+left shift+right',
     '--preview', f'python3 {SCRIPT} preview {{}}',
     '--preview-window', 'left:52%:border-none',
     '--bind', f'enter:reload(python3 {SCRIPT} reload {{+}})+clear-query',
     '--bind', f'ctrl-d:execute(python3 {SCRIPT} download_folder {{+}})',
-    '--bind', 'ctrl-a:toggle-all+last+toggle+first',
+    '--bind', 'ctrl-a:toggle-all',
     '--bind', 'ctrl-g:first',
     '--bind', 'ctrl-t:last',
     '--bind', f'shift-left:reload(python3 {SCRIPT} reload ..)+clear-query',
@@ -298,12 +298,12 @@ def main():
             break
 
         for k in data:
-            if k == '..':
+            if k == '..' and len(data) == 1:
                 if len(old_db) > 0:
                     db = old_db[-1].copy()
                     del old_db[-1]
                 break
-            elif k in db:
+            elif k in db and k != '..':
                 if not isinstance(db[k], dict):
                     files.append(db[k])
 

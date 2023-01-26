@@ -18,7 +18,7 @@ s = requests.Session()
 s.cookies.set(
     wp.group(1),
     wp.group(2).strip(),
-    domain = URL.split('/')[2]
+    domain=URL.split('/')[2]
 )
 
 error_msg = '''<rss version="2.0">
@@ -37,7 +37,7 @@ try:
             r = s.get(URL)
             rss = r.text
         except Exception as err:
-            rss = err_msg.format(err)
+            rss = error_msg.format(err)
 
         assert '<rss version' in rss
         with open(FILE, 'w') as fp:

@@ -1,5 +1,5 @@
 # anitsu_tools
-[![Dependencies and flake8 check](https://github.com/b1337xyz/anitsu_tools/actions/workflows/flake8.yml/badge.svg)](https://github.com/b1337xyz/anitsu_tools/actions/workflows/flake8.yml)
+[![ test ](https://github.com/b1337xyz/anitsu_tools/actions/workflows/flake8.yml/badge.svg)](https://github.com/b1337xyz/anitsu_tools/actions/workflows/flake8.yml)
 
 ### Dependencies
 

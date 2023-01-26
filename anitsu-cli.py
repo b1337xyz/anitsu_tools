@@ -34,14 +34,16 @@ RE_EXT = re.compile(r'.*\.(?:mkv|avi|mp4|webm|ogg|mov|rmvb|mpg|mpeg)$')
 FZF_ARGS = [
     '-m',
     '--border', 'none',
-    '--header', 'ctrl-d ctrl-a ctrl-g ctrl-t',
+    '--header', 'ctrl-d ctrl-a ctrl-g ctrl-t shift+left shift+right',
     '--preview', f'python3 {SCRIPT} preview {{}}',
     '--preview-window', 'left:52%:border-none',
     '--bind', f'enter:reload(python3 {SCRIPT} reload {{+}})+clear-query',
     '--bind', f'ctrl-d:execute(python3 {SCRIPT} download_folder {{+}})',
     '--bind', 'ctrl-a:toggle-all+last+toggle+first',
     '--bind', 'ctrl-g:first',
-    '--bind', 'ctrl-t:last'
+    '--bind', 'ctrl-t:last',
+    '--bind', f'shift-left:reload(python3 {SCRIPT} reload ..)+clear-query',
+    '--bind', f'shift-right:reload(python3 {SCRIPT} reload {{}})+clear-query'
 ]
 
 
@@ -73,7 +75,6 @@ def fzf(args):
 
 
 def kill_fzf():
-    sleep(0.3)
     if os.path.exists(FZF_PID):
         try:
             with open(FZF_PID, 'r') as fp:
@@ -87,6 +88,7 @@ def kill_fzf():
 
 def cleanup():
     """ Make sure that every FIFO dies and temporary files are deleted """
+    sleep(0.3)
     def kill(fifo):
         if os.path.exists(fifo):
             with open(fifo, 'w') as fp:
@@ -289,10 +291,11 @@ def main():
 
         for k in data:
             if k == '..':
-                db = old_db[-1].copy()
-                del old_db[-1]
+                if len(old_db) > 0:
+                    db = old_db[-1].copy()
+                    del old_db[-1]
                 break
-
+            
             if not isinstance(db[k], dict):
                 files.append(db[k])
 

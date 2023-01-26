@@ -50,6 +50,8 @@ async def main():
                 queue.put_nowait((url, image_path))
 
         qsize = queue.qsize()
+        if qsize == 0:
+            return
         print(f'{qsize} images to download, please wait...')
         tasks = []
         for _ in range(Q_SIZE):

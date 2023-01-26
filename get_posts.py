@@ -148,6 +148,7 @@ async def main():
         now = datetime.isoformat(datetime.now())
     except FileNotFoundError:
         now = '1970-01-01T00:00:00'
+        last_run = now
 
     open(LAST_RUN, 'w').write(now)
 

@@ -27,7 +27,6 @@ RE_GDR = re.compile(r'href=\"(https://drive\.google[^\"]*)')
 RE_PASS = re.compile(r'Senha: <span[^>]*>(.*)</span')
 MAX_ATTEMPTS = 3
 Q_SIZE = 10
-NOW = datetime.isoformat(datetime.now())
 RED = '\033[1;31m'
 GRN = '\033[1;32m'
 END = '\033[m'
@@ -148,10 +147,11 @@ async def main():
     try:
         with open(LAST_RUN, 'r') as fp:
             last_run = fp.read()
+        now = datetime.isoformat(datetime.now())
     except FileNotFoundError:
-        last_run = NOW
+        now = '1970-01-01T00:00:00'
 
-    open(LAST_RUN, 'w').write(NOW)
+    open(LAST_RUN, 'w').write(now)
 
     user, passwd = get_auth()
     auth = BasicAuth(user, passwd)

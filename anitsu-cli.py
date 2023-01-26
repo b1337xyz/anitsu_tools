@@ -24,12 +24,19 @@ DL_DIR = os.path.join(HOME, 'Downloads')
 DB = os.path.join(HOME, '.local/share/anitsu_files.json')
 PID = os.getpid()
 
-DL_FILE = f'/tmp/anitsu.{PID}'
+DL_FILE = os.path.join(ROOT, f'.anitsu.{PID}')
 FIFO = '/tmp/anitsu.fifo'
 PREVIEW_FIFO = '/tmp/anitsu.preview.fifo'
 UB_FIFO = '/tmp/anitsu.ueberzug.fifo'
 FZF_PID = '/tmp/anitsu.fzf'
 RE_EXT = re.compile(r'.*\.(?:mkv|avi|mp4|webm|ogg|mov|rmvb|mpg|mpeg)$')
+ARIA2_SESSION = os.path.join(ROOT, '.session')
+ARIA2_ARGS = [
+    '-j', '2',
+    '--save-session', ARIA2_SESSION,
+    '--save-session-interval', '30'
+]
+LOG = os.path.join(ROOT, 'log')
 
 FZF_ARGS = [
     '-m',
@@ -89,6 +96,7 @@ def kill_fzf():
 def cleanup():
     """ Make sure that every FIFO dies and temporary files are deleted """
     sleep(0.3)
+
     def kill(fifo):
         if os.path.exists(fifo):
             with open(fifo, 'w') as fp:
@@ -118,7 +126,7 @@ def reload(args):
     with open(FIFO, 'r') as fifo:
         data = fifo.read()
 
-    for i in [i.strip() for i in data.split('\n') if i]:
+    for i in [i for i in data.split('\n') if i]:
         stdout.write(f'{i}\n')
 
 
@@ -211,7 +219,7 @@ def preview_fifo():
             return
 
         output = list()
-        for k in [i.strip() for i in data.split('\n') if i]:
+        for k in [i for i in data.split('\n') if i]:
             if k == '..':
                 break
             elif k in db:
@@ -274,7 +282,7 @@ def main():
     while os.path.exists(FIFO):
         with open(FIFO, 'r') as fifo:
             data = fifo.read()
-            data = [i.strip() for i in data.split('\n') if i]
+            data = [i for i in data.split('\n') if i]
 
         if len(data) == 0:
             break
@@ -295,9 +303,9 @@ def main():
                     db = old_db[-1].copy()
                     del old_db[-1]
                 break
-            
-            if not isinstance(db[k], dict):
-                files.append(db[k])
+            elif k in db:
+                if not isinstance(db[k], dict):
+                    files.append(db[k])
 
         if files:
             break
@@ -319,17 +327,16 @@ def main():
 
     if files:
         with open(DL_FILE, 'w') as fp:
-            fp.write('\n'.join(url for url in files))
+            fp.write('\n'.join(files))
 
         try:
-            sp.run([
-                'aria2c', '-j', '2',
-                '--dir', DL_DIR, f'--input-file={DL_FILE}'
-            ])
+            p = sp.run([
+                'aria2c', '--dir', DL_DIR, f'--input-file={DL_FILE}'
+            ] + ARIA2_ARGS)
+            if p.returncode == 0:
+                os.remove(DL_FILE)
         except KeyboardInterrupt:
             pass
-        finally:
-            os.remove(DL_FILE)
 
 
 if __name__ == '__main__':
@@ -342,6 +349,7 @@ if __name__ == '__main__':
         try:
             main()
         finally:
+            print('\nbye...')
             for i in threads:
                 if i.is_alive():
                     print(i.name)

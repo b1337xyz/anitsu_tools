@@ -32,7 +32,7 @@ def tree():
 
 def set_value(root, path, value):
     for d in path[:-1]:
-        root = root[unquote(d)]
+        root = root[unquote(d).strip()]
     root[path[-1]] = value
 
 

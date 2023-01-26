@@ -23,6 +23,17 @@ if not os.path.exists(opts.dir) or not args:
     sys.exit(1)
 
 for url in args:
+    FILEID = re.search(r'/folders/([^\?$/]*)', url)
+    if 'drive.google' in url and FILEID:
+        try:
+            sp.run([
+                'rclone', 'copy', '-P',
+                '--drive-root-folder-id', FILEID.group(1), 'Anitsu:', DL_DIR
+            ])
+        except KeyboardInterrupt:
+            sys.exit(130)
+        continue
+
     user = RE_USER.search(url).group(1)
     if '?path=' in url:
         path = unquote(re.search(r'\?path=([^&]*)', url).group(1))

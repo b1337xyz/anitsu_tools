@@ -326,12 +326,26 @@ def main():
             pass
 
 
+def update(args):
+    os.chdir(ROOT)
+    for script in ['get_posts.py', 'get_files.py']:
+        print(f'>>> Running {script}')
+        p = sp.run(['python3', script])
+        if p.returncode != 0:
+            exit(p.returncode)
+
+    if '-i' in args or '--download-images' in args:
+        sp.run(['python3', 'download_images.py'])
+
 if __name__ == '__main__':
     args = argv[1:]
     threads = []
     if not args:
         if os.path.exists(FIFO):
             raise FileExistsError(FIFO)
+
+        if not os.path.exists(FILES_DB):
+            update(args)
 
         try:
             main()
@@ -342,16 +356,7 @@ if __name__ == '__main__':
                     i.join()
             print('bye ^-^')
     elif 'update' in args:
-        os.chdir(ROOT)
-        for script in ['get_posts.py', 'get_files.py']:
-            print(f'>>> Running {script}')
-            p = sp.run(['python3', script])
-            if p.returncode != 0:
-                exit(p.returncode)
-
-        if '-i' in args or '--download-images' in args:
-            sp.run(['python3', 'download_images.py'])
-
+        update(args)
     elif 'download_folder' in args:
         download_folder(args[1:])
     elif 'preview' in args:

@@ -337,6 +337,7 @@ def update(args):
     if '-i' in args or '--download-images' in args:
         sp.run(['python3', 'download_images.py'])
 
+
 if __name__ == '__main__':
     args = argv[1:]
     threads = []

@@ -343,11 +343,15 @@ if __name__ == '__main__':
             print('bye ^-^')
     elif 'update' in args:
         os.chdir(ROOT)
-        for script in ['get_posts.py', 'get_files.py', 'download_images.py']:
+        for script in ['get_posts.py', 'get_files.py']:
             print(f'>>> Running {script}')
             p = sp.run(['python3', script])
             if p.returncode != 0:
                 exit(p.returncode)
+
+        if '-i' in args or '--download-images' in args:
+            sp.run(['python3', 'download_images.py'])
+
     elif 'download_folder' in args:
         download_folder(args)
     elif 'preview' in args:
@@ -356,4 +360,4 @@ if __name__ == '__main__':
         reload(args[1:])
     else:
         script = SCRIPT.split('/')[-1]
-        print(f'Usage: {script} [update]')
+        print(f'Usage: {script} [update -i --download-images]')

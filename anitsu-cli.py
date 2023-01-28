@@ -353,7 +353,7 @@ if __name__ == '__main__':
             sp.run(['python3', 'download_images.py'])
 
     elif 'download_folder' in args:
-        download_folder(args)
+        download_folder(args[1:])
     elif 'preview' in args:
         preview(args[1])
     elif 'reload' in args:

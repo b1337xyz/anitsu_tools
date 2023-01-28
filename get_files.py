@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from utils import *
 from aiohttp import ClientSession, BasicAuth
 from urllib.parse import unquote
 from html import unescape
@@ -8,11 +9,6 @@ from shutil import which
 import random
 import asyncio
 import json
-import re
-import os
-
-ROOT = os.path.realpath(os.path.dirname(__file__))
-DB = os.path.join(ROOT, 'anitsu.json')
 
 Q_SIZE = 20
 MAX_ATTEMPTS = 3
@@ -231,6 +227,27 @@ async def main():
 
     with open(DB, 'w') as fp:
         json.dump(db, fp)
+
+    files = dict()
+    for k, v in db.items():
+        title = db[k]['title']
+        s = f'{title} (post-{k})'
+        files[s] = dict()
+        for v2 in v['nextcloud'].values():
+            files[s].update(v2)
+        for v2 in v['gdrive'].values():
+            files[s].update(v2)
+
+    def count(data):
+        t = 0
+        for k in data:
+            t += count(data[k]) if isinstance(data[k], dict) else 1
+        return t
+
+    print(count(files))
+    files = {k: files[k] for k in sorted(list(files.keys()))}
+    with open(FILES_DB, 'w') as fp:
+        json.dump(files, fp)
 
 
 if __name__ == '__main__':

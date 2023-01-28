@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-from sys import argv, stdout
+from utils import *
+from sys import argv, stdout, exit
 from threading import Thread
 from time import sleep
 import json
-import os
-import re
 import signal
 import subprocess as sp
 
@@ -16,13 +15,8 @@ try:
 except ImportError:
     pass
 
-SCRIPT = os.path.realpath(__file__)
-ROOT = os.path.dirname(SCRIPT)
-IMG_DIR = os.path.join(ROOT, 'covers')
-DB = os.path.join(ROOT, 'anitsu_files.json')
-HOME = os.getenv('HOME')
-DL_DIR = os.path.join(HOME, 'Downloads')
 PID = os.getpid()
+SCRIPT = os.path.realpath(__file__)
 DL_FILE = os.path.join(f'/tmp/anitsu.{PID}')
 FIFO = '/tmp/anitsu.fifo'
 PREVIEW_FIFO = '/tmp/anitsu.preview.fifo'
@@ -91,18 +85,18 @@ def cleanup():
     sleep(0.3)
 
     def kill(fifo):
-        if os.path.exists(fifo):
-            with open(fifo, 'w') as fp:
-                fp.write('')
-            try:
-                os.remove(fifo)
-            except FileNotFoundError:
-                pass
+        with open(fifo, 'w') as fp:
+            fp.write('')
+        try:
+            os.remove(fifo)
+        except FileNotFoundError:
+            pass
 
     for i in [UB_FIFO, PREVIEW_FIFO, FIFO]:
-        t = Thread(target=kill, args=(i,))
-        t.start()
-        threads.append(t)
+        if os.path.exists(i):
+            t = Thread(target=kill, args=(i,))
+            t.start()
+            threads.append(t)
 
 
 def download_folder(args):
@@ -245,7 +239,6 @@ def find_files(data):
 
 def main():
     global db, threads
-    threads = list()
 
     for i in [PREVIEW_FIFO, FIFO]:
         if os.path.exists(i):
@@ -258,7 +251,7 @@ def main():
         t.start()
         threads.append(t)
 
-    with open(DB, 'r') as fp:
+    with open(FILES_DB, 'r') as fp:
         db = json.load(fp)
 
     t = Thread(target=preview_fifo)
@@ -342,18 +335,24 @@ if __name__ == '__main__':
         try:
             main()
         finally:
-            print('\nbye...')
             for i in threads:
                 if i.is_alive():
-                    print(i.name)
+                    print(f'waiting for {i.name} ...')
                     i.join()
-
+            print('bye ^-^')
+    elif 'update' in args:
+        os.chdir(ROOT)
+        for script in ['get_posts.py', 'get_files.py', 'download_images.py']:
+            print(f'>>> Running {script}')
+            p = sp.run(['python3', script])
+            if p.returncode != 0:
+                exit(p.returncode)
     elif 'download_folder' in args:
         download_folder(args)
-    elif 'update' in args:
-        script = os.path.join(ROOT, 'update.sh')
-        sp.run(['bash', script])
     elif 'preview' in args:
         preview(args[1])
     elif 'reload' in args:
         reload(args[1:])
+    else:
+        script = SCRIPT.split('/')[-1]
+        print(f'Usage: {script} [update]')

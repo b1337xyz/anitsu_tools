@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from utils import *
 from aiohttp import ClientSession
 import aiofiles
 import asyncio
@@ -6,10 +7,7 @@ import json
 import os
 import subprocess as sp
 
-ROOT = os.path.realpath(os.path.dirname(__file__))
-DB = os.path.join(ROOT, 'anitsu.json')
 Q_SIZE = 15
-
 
 async def download(queue):
     while True:
@@ -24,12 +22,10 @@ async def download(queue):
 
         if os.path.exists(image_path):
             try:
-                p = sp.run(['file', '-bi', image_path], stdout=sp.PIPE)
-                if 'jpeg' not in p.stdout.decode():
-                    sp.run([
-                        'convert', f'{image_path}[0]',
-                        '-resize', '424x600>', image_path
-                    ])
+                sp.run([
+                    'convert', f'{image_path}[0]',
+                    '-resize', '424x600>', image_path
+                ])
             except Exception:
                 os.remove(image_path)
         queue.task_done()

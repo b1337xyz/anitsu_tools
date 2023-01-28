@@ -1,20 +1,15 @@
 #!/usr/bin/env python3
+from utils import *
 from datetime import datetime
 from aiohttp import ClientSession, BasicAuth
 from html import unescape
 from getpass import getpass
 import asyncio
 import json
-import os
 import random
-import re
 
-ROOT = os.path.realpath(os.path.dirname(__file__))
-DB = os.path.join(ROOT, 'anitsu.json')
 CONFIG = os.path.join(ROOT, '.config')
-IMG_DIR = os.path.join(ROOT, 'covers')
 LAST_RUN = os.path.join(ROOT, '.last_run')
-
 WP_URL = 'https://anitsu.moe/wp-json/wp/v2/posts?per_page=100&page={}\
 &modified_after={}&_fields=id,date,modified,link,title,content'
 RE_IMG = re.compile(r'src=\"([^\"]*\.(?:png|jpe?g|webp|gif))')
@@ -25,9 +20,6 @@ RE_GDR = re.compile(r'href=\"(https://drive\.google[^\"]*)')
 RE_PASS = re.compile(r'Senha: <span[^>]*>(.*)</span')
 MAX_ATTEMPTS = 3
 Q_SIZE = 10
-RED = '\033[1;31m'
-GRN = '\033[1;32m'
-END = '\033[m'
 
 
 def get_auth():
@@ -142,14 +134,13 @@ async def main():
     except FileNotFoundError:
         db = dict()
 
-    try:
+    if os.path.exists(LAST_RUN) and db:
         with open(LAST_RUN, 'r') as fp:
             last_run = fp.read()
-        now = datetime.isoformat(datetime.now())
-    except FileNotFoundError:
-        now = '2000-01-01T00:00:00'
-        last_run = now
+    else:
+        last_run = '2000-01-01T00:00:00'
 
+    now = datetime.isoformat(datetime.now())
     open(LAST_RUN, 'w').write(now)
 
     user, passwd = get_auth()

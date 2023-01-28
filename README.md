@@ -101,9 +101,10 @@ Recommended: [Making your own client_id](https://rclone.org/drive/#making-your-o
 git clone https://github.com/b1337xyz/anitsu_tools.git
 cd anitsu_tools
 python3 -m pip install -U --user -r requirements.txt
-chmod +x update.sh
-./update.sh
+python3 anitsu-cli.py update
+python3 anitsu-cli.py  # to run it
 ```
+
 
 ## What you can do with this...
 ![gif](anitsu-cli.demo.gif)

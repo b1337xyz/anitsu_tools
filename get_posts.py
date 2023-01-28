@@ -7,6 +7,7 @@ from getpass import getpass
 import asyncio
 import json
 import random
+import re
 
 CONFIG = os.path.join(ROOT, '.config')
 LAST_RUN = os.path.join(ROOT, '.last_run')

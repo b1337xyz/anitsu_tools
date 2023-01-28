@@ -9,6 +9,7 @@ import subprocess as sp
 
 Q_SIZE = 15
 
+
 async def download(queue):
     while True:
         url, image_path = await queue.get()

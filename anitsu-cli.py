@@ -6,6 +6,7 @@ from time import sleep
 import json
 import signal
 import subprocess as sp
+import re
 
 has_ueberzug = False
 try:

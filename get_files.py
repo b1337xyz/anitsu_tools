@@ -9,6 +9,7 @@ from shutil import which
 import random
 import asyncio
 import json
+import re
 
 Q_SIZE = 20
 MAX_ATTEMPTS = 3

@@ -107,4 +107,4 @@ python3 anitsu-cli.py  # to run it
 
 
 ## What you can do with this...
-![gif](anitsu-cli.demo.gif)
+![gif](assets/demo.gif)

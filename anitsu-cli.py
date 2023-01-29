@@ -18,32 +18,31 @@ if len(argv) == 1:
     except ImportError:
         pass
 
+    PID = os.getpid()
+    SCRIPT = os.path.realpath(__file__)
+    DL_FILE = os.path.join(f'/tmp/anitsu.{PID}')
+    FZF_PID = '/tmp/anitsu.fzf'
+    FZF_ARGS = [
+        '-m', '--cycle',
+        '--border', 'none',
+        '--header', 'ctrl-d ctrl-a ctrl-g ctrl-t shift+left shift+right',
+        '--preview', f'python3 {SCRIPT} preview {{}}',
+        '--preview-window', 'left:52%:border-none',
+        '--bind', f'enter:reload(python3 {SCRIPT} reload {{+}})+clear-query',
+        '--bind', f'ctrl-d:execute(python3 {SCRIPT} download_folder {{+}})',
+        '--bind', 'ctrl-a:toggle-all',
+        '--bind', 'ctrl-g:first',
+        '--bind', 'ctrl-t:last',
+        '--bind', f'shift-left:reload(python3 {SCRIPT} reload ..)+clear-query',
+        '--bind', f'shift-right:reload(python3 {SCRIPT} reload {{}})+clear-query'
+    ]
+    ARIA2_ARGS = ['-j', '2']
 
 
-PID = os.getpid()
-SCRIPT = os.path.realpath(__file__)
-DL_FILE = os.path.join(f'/tmp/anitsu.{PID}')
 FIFO = '/tmp/anitsu.fifo'
 PREVIEW_FIFO = '/tmp/anitsu.preview.fifo'
 UB_FIFO = '/tmp/anitsu.ueberzug.fifo'
-FZF_PID = '/tmp/anitsu.fzf'
 RE_EXT = re.compile(r'.*\.(?:mkv|avi|mp4|webm|ogg|mov|rmvb|mpg|mpeg)$')
-ARIA2_ARGS = ['-j', '2']
-
-FZF_ARGS = [
-    '-m', '--cycle',
-    '--border', 'none',
-    '--header', 'ctrl-d ctrl-a ctrl-g ctrl-t shift+left shift+right',
-    '--preview', f'python3 {SCRIPT} preview {{}}',
-    '--preview-window', 'left:52%:border-none',
-    '--bind', f'enter:reload(python3 {SCRIPT} reload {{+}})+clear-query',
-    '--bind', f'ctrl-d:execute(python3 {SCRIPT} download_folder {{+}})',
-    '--bind', 'ctrl-a:toggle-all',
-    '--bind', 'ctrl-g:first',
-    '--bind', 'ctrl-t:last',
-    '--bind', f'shift-left:reload(python3 {SCRIPT} reload ..)+clear-query',
-    '--bind', f'shift-right:reload(python3 {SCRIPT} reload {{}})+clear-query'
-]
 
 
 def get_psize(size):
@@ -346,9 +345,8 @@ def update(args):
 
 if __name__ == '__main__':
     args = argv[1:]
-    threads = []
-
     if not args:
+        threads = []
         if os.path.exists(FIFO):
             raise FileExistsError(FIFO)
 

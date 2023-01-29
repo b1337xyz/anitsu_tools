@@ -1,20 +1,24 @@
 #!/usr/bin/env python3
 from utils import *
 from sys import argv, stdout, exit
-from threading import Thread
-from time import sleep
-import json
-import signal
-import subprocess as sp
 import re
 
-has_ueberzug = False
-try:
-    if os.getenv('DISPLAY'):
-        import ueberzug.lib.v0 as ueberzug
-        has_ueberzug = True
-except ImportError:
-    pass
+if len(argv) == 1:
+    from threading import Thread
+    from time import sleep
+    import json
+    import signal
+    import subprocess as sp
+
+    has_ueberzug = False
+    try:
+        if os.getenv('DISPLAY'):
+            import ueberzug.lib.v0 as ueberzug
+            has_ueberzug = True
+    except ImportError:
+        pass
+
+
 
 PID = os.getpid()
 SCRIPT = os.path.realpath(__file__)
@@ -49,7 +53,7 @@ def get_psize(size):
         if size < 1000:
             break
         size /= 1000
-        psize = f"{size:.2f} {i}"
+        psize = f"{size:8.2f} {i}"
     return psize
 
 
@@ -127,6 +131,7 @@ def preview(arg):
     with open(PREVIEW_FIFO, 'r') as fifo:
         data = fifo.read().split('\n')
 
+    has_ueberzug = os.path.exists(UB_FIFO)
     if has_ueberzug:
         stdout.write('\n' * 22)
 
@@ -241,7 +246,7 @@ def find_files(data):
 def main():
     global db, threads
 
-    for i in [PREVIEW_FIFO, FIFO]:
+    for i in [FIFO, PREVIEW_FIFO]:
         if os.path.exists(i):
             os.remove(i)
         os.mkfifo(i)
@@ -327,6 +332,7 @@ def main():
 
 
 def update(args):
+    import subprocess as sp
     os.chdir(ROOT)
     for script in ['get_posts.py', 'get_files.py']:
         print(f'>>> Running {script}')
@@ -341,6 +347,7 @@ def update(args):
 if __name__ == '__main__':
     args = argv[1:]
     threads = []
+
     if not args:
         if os.path.exists(FIFO):
             raise FileExistsError(FIFO)

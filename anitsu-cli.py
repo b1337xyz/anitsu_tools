@@ -3,6 +3,12 @@ from utils import *
 from sys import argv, stdout, exit
 import re
 
+SCRIPT = os.path.realpath(__file__)
+FIFO = '/tmp/anitsu.fifo'
+PREVIEW_FIFO = '/tmp/anitsu.preview.fifo'
+UB_FIFO = '/tmp/anitsu.ueberzug.fifo'
+RE_EXT = re.compile(r'.*\.(?:mkv|avi|mp4|webm|ogg|mov|rmvb|mpg|mpeg)$')
+
 if len(argv) == 1:
     from threading import Thread
     from time import sleep
@@ -19,7 +25,6 @@ if len(argv) == 1:
         pass
 
     PID = os.getpid()
-    SCRIPT = os.path.realpath(__file__)
     DL_FILE = os.path.join(f'/tmp/anitsu.{PID}')
     FZF_PID = '/tmp/anitsu.fzf'
     FZF_ARGS = [
@@ -37,12 +42,6 @@ if len(argv) == 1:
         '--bind', f'shift-right:reload(python3 {SCRIPT} reload {{}})+clear-query'
     ]
     ARIA2_ARGS = ['-j', '2']
-
-
-FIFO = '/tmp/anitsu.fifo'
-PREVIEW_FIFO = '/tmp/anitsu.preview.fifo'
-UB_FIFO = '/tmp/anitsu.ueberzug.fifo'
-RE_EXT = re.compile(r'.*\.(?:mkv|avi|mp4|webm|ogg|mov|rmvb|mpg|mpeg)$')
 
 
 def get_psize(size):
@@ -151,10 +150,10 @@ def preview(arg):
             total += size
             size = get_psize(size)
             s = re.sub(r' \((?:size|post)-.*$', '', s)
-            s = f'{size:<9} \033[1;35m{s}\033[m'
+            s = f'{size} {MAG}{s}{END}'
         except AttributeError:  # is a directory
             s = re.sub(r' \((?:size|post)-.*$', '', s)
-            s = f'\033[1;34m{s}\033[m'
+            s = f'{BLU}{s}{END}'
         data[i] = s
 
     if total > 0:

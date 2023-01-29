@@ -10,6 +10,8 @@ FILES_DB = os.path.join(DB_PATH, 'anitsu_files.json')
 IMG_DIR = os.path.join(ROOT, 'images')
 RED = '\033[1;31m'
 GRN = '\033[1;32m'
+BLU = '\033[1;34m'
+MAG = '\033[1;35m'
 END = '\033[m'
 
 for dir in [DB_PATH, IMG_DIR]:

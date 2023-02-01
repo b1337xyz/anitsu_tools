@@ -9,12 +9,6 @@ import subprocess as sp
 import re
 import traceback
 
-SCRIPT = os.path.realpath(__file__)
-FIFO = '/tmp/anitsu.fifo'
-PREVIEW_FIFO = '/tmp/anitsu.preview.fifo'
-UB_FIFO = '/tmp/anitsu.ueberzug.fifo'
-RE_EXT = re.compile(r'.*\.(?:mkv|avi|mp4|webm|ogg|mov|rmvb|mpg|mpeg)$')
-
 has_ueberzug = False
 try:
     if os.getenv('DISPLAY'):
@@ -24,8 +18,13 @@ except ImportError:
     pass
 
 PID = os.getpid()
+SCRIPT = os.path.realpath(__file__)
+RE_EXT = re.compile(r'.*\.(?:mkv|avi|mp4|webm|ogg|mov|rmvb|mpg|mpeg)$')
 DL_FILE = os.path.join(f'/tmp/anitsu.{PID}')
-FZF_PID = '/tmp/anitsu.fzf'
+FIFO = f'/tmp/anitsu.{PID}.fifo'
+PREVIEW_FIFO = f'/tmp/anitsu.preview.{PID}.fifo'
+UB_FIFO = f'/tmp/anitsu.ueberzug.{PID}.fifo'
+FZF_PID = f'/tmp/anitsu.{PID}.fzf'
 FZF_ARGS = [
     '-m', '--cycle',
     '--border', 'none',
@@ -39,7 +38,6 @@ FZF_ARGS = [
     '--bind', 'ctrl-a:toggle-all',
     '--bind', 'ctrl-g:first',
     '--bind', 'ctrl-t:last',
-
 ]
 ARIA2_ARGS = ['-j', '2']
 

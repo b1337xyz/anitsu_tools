@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from utils import *
-from sys import argv, stdout, exit
+from sys import argv, exit
 from threading import Thread
 from time import sleep
 import json
@@ -102,12 +102,31 @@ def cleanup():
             threads.append(t)
 
 
-def preview(arg: str, files: list):
-    """ List files and send back to fzf and the post image to ueberzug """
-    output = ['\n' * 22] if has_ueberzug else [] 
+def ueberzug_fifo():
+    """ Ueberzug fifo listener """
 
+    # https://github.com/b1337xyz/ueberzug#python
+    with ueberzug.Canvas() as canvas:
+        pv = canvas.create_placement(
+            'pv', x=0, y=0, width=32, height=20,
+            scaler=ueberzug.ScalerOption.DISTORT.value
+        )
+        while os.path.exists(UB_FIFO):
+            with open(UB_FIFO, 'r') as fifo:
+                img = fifo.read().strip()
+
+            if len(img) == 0:
+                break
+
+            pv.path = img
+            pv.visibility = ueberzug.Visibility.VISIBLE
+
+
+def preview(k: str, files: list):
+    """ List files and send to fzf and the post image to ueberzug """
+    output = ['\n' * 22] if has_ueberzug else []
     try:
-        post_id = re.search(r' \(post-(\d+)\)$', arg).group(1)
+        post_id = re.search(r' \(post-(\d+)\)$', k).group(1)
         img = os.path.join(IMG_DIR, f'{post_id}.jpg')
         if os.path.exists(img) and has_ueberzug:
             open(UB_FIFO, 'w').write(img)
@@ -135,26 +154,6 @@ def preview(arg: str, files: list):
         output += [f'Total size: {get_psize(total)}\n']
     with open(PREVIEW_FIFO, 'w') as fifo:
         fifo.write('\n'.join(output + files))
-
-
-def ueberzug_fifo():
-    """ Ueberzug fifo listener """
-
-    # https://github.com/b1337xyz/ueberzug#python
-    with ueberzug.Canvas() as canvas:
-        pv = canvas.create_placement(
-            'pv', x=0, y=0, width=32, height=20,
-            scaler=ueberzug.ScalerOption.DISTORT.value
-        )
-        while os.path.exists(UB_FIFO):
-            with open(UB_FIFO, 'r') as fifo:
-                img = fifo.read().strip()
-
-            if len(img) == 0:
-                break
-
-            pv.path = img
-            pv.visibility = ueberzug.Visibility.VISIBLE
 
 
 def preview_fifo():
@@ -208,10 +207,7 @@ def find_files(data):
     """ Recursively find "files" and return them """
     files = []
     for k in data:
-        if isinstance(data[k], str):
-            files += [data[k]]
-        else:
-            files += find_files(data[k])
+        files += find_files(data[k]) if isinstance(data[k], dict) else [data[k]]
     return files
 
 

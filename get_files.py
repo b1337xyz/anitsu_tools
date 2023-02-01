@@ -99,9 +99,10 @@ async def google_drive(k, url):
                 out = await r.text()
 
             if 'Too many users have viewed or downloaded this file recently' in out:
-                print(f'429, {url}')
+                print(f'{out = }\n{k = }\n{url = }')
                 return
 
+            root = tree()
             try:
                 # filename = re.search(r'>([^<]*\.(?:mkv|mp4|avi))', out).group(1)
                 # size = re.search(r' \(((?:\d+|\d+\.\d+)[BMKGT])\)</span>', out).group(1)

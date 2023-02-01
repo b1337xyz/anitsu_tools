@@ -52,7 +52,7 @@ async def google_drive(k, url):
             stdout, _ = await p.communicate()
             data = json.loads(stdout.decode())
         except Exception as err:
-            print(f'Key: {k}, Error: {err}\n{url}')
+            print(f'{k = }\n{err = }\n{url = }')
             return
 
         root = tree()
@@ -69,7 +69,7 @@ async def google_drive(k, url):
             ID = RE_GD_FILEID.search(url).group(1)
 
         if not ID:
-            print(f'ID not found: {url}')
+            print(f'FILEID not found: {url = }')
             return
 
         if HAS_GDRIVE:
@@ -81,7 +81,7 @@ async def google_drive(k, url):
                 stdout, _ = await p.communicate()
                 stdout = stdout.decode()
             except Exception as err:
-                print(f'Key: {k}, Error: {err}\n{url}')
+                print(f'{k = }\n{err = }\n{url = }')
                 return
 
             root = tree()
@@ -90,7 +90,7 @@ async def google_drive(k, url):
                 size = re.search(r'(?:^|\n)Size: (\d+)', stdout).group(1)
                 dl_link = re.search(r'(?:^|\n)DownloadUrl: ([^\n]*)', stdout).group(1)
             except Exception as err:
-                print(f'Key: {k}, Error: {err}\n{url}')
+                print(f'{k = }\n{err = }\n{url = }')
                 return
             filename = f'{filename} (size-{size})'
         else:
@@ -113,8 +113,7 @@ async def google_drive(k, url):
                 # https://stackoverflow.com/questions/42865724/parse-human-readable-filesizes-into-bytes
                 size = parse_size(size)
             except Exception as err:
-                print(out)
-                print(f'Key: {k}, Error: {err}\n{url}')
+                print(f'{out = }\n{k = }\n{err = }\n{url = }')
                 return
 
         dl_link = f'https://drive.google.com/uc?id={ID}&export=download&confirm=t'
@@ -138,7 +137,7 @@ async def nextcloud(k, url, password=''):
                 if r.status in [200, 207]:
                     break
         except Exception as err:
-            print(f'\033[1;31m{err}\033[m\n{url}')
+            print(f'{err = }\n{url}')
         att += 1
         await random_sleep()
     else:
@@ -175,7 +174,7 @@ async def nextcloud(k, url, password=''):
             async with session.request(method='HEAD', url=f'https://{webdav}', auth=auth) as r:
                 content = r.headers['content-disposition']
         except Exception as err:
-            print(f'\033[1;31m{err}\033[m\n{url}')
+            print(f'{err = }\n{url}')
             return
         dl_link = f'https://{user}:{password}@{webdav}/'
         size = re.search(r'd:getcontentlength>(\d+)<', xml).group(1)
@@ -246,8 +245,7 @@ async def main():
             t += count(data[k]) if isinstance(data[k], dict) else 1
         return t
 
-    print(count(files))
-    files = {k: files[k] for k in sorted(list(files.keys()))}
+    print(count(files), 'files')
     with open(FILES_DB, 'w') as fp:
         json.dump(files, fp)
 

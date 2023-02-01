@@ -262,8 +262,10 @@ def main():
     t.start()
     threads.append(t)
 
-    keys = list(db.keys())
-    t = Thread(target=fzf, args=(keys,))
+    # keys = sorted(db)
+    keys = sorted(db, reverse=True,
+                  key=lambda x: int(re.search(r'post-(\d+)', x).group(1)))
+    t = Thread(target=fzf, args=(keys[::-1],))
     t.start()
     threads.append(t)
 

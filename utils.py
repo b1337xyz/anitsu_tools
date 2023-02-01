@@ -4,10 +4,10 @@ import os
 ROOT = os.path.realpath(os.path.dirname(__file__))
 HOME = os.getenv('HOME')
 DL_DIR = os.path.join(HOME, 'Downloads')
+IMG_DIR = os.path.join(ROOT, 'images')
 DB_PATH = os.path.join(ROOT, 'db')
 DB = os.path.join(DB_PATH, 'anitsu.json')
 FILES_DB = os.path.join(DB_PATH, 'anitsu_files.json')
-IMG_DIR = os.path.join(ROOT, 'images')
 RED = '\033[1;31m'
 GRN = '\033[1;32m'
 BLU = '\033[1;34m'

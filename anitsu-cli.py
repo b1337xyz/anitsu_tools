@@ -28,7 +28,7 @@ FZF_PID = f'/tmp/anitsu.{PID}.fzf'
 FZF_ARGS = [
     '-m', '--cycle',
     '--border', 'none',
-    '--header', 'ctrl-d ctrl-a ctrl-g ctrl-t shift+left shift+right',
+    '--header', 'ctrl-d ctrl-a ctrl-g ctrl-t ctrl-h ctrl-l',
     '--preview-window', 'left:52%:border-none',
     '--preview', f"printf '%s' {{}} > {PREVIEW_FIFO} && cat {PREVIEW_FIFO}",
     '--bind', f"enter:reload(printf '%s\\n' {{+}} > {FIFO} && cat {FIFO})+clear-query",
@@ -83,6 +83,7 @@ def kill_fzf():
 
 def cleanup():
     """ Make sure that every FIFO dies and temporary files are deleted """
+
     sleep(0.3)
 
     def kill(fifo):
@@ -122,6 +123,7 @@ def ueberzug_fifo():
 
 def preview(k: str, files: list):
     """ List files and send to fzf and the post image to ueberzug """
+
     output = ['\n' * 22] if has_ueberzug else []
     try:
         post_id = re.search(r' \(post-(\d+)\)$', k).group(1)
@@ -149,7 +151,7 @@ def preview(k: str, files: list):
         files[i] = s
 
     if total > 0:
-        output += [f'Total size: {get_psize(total)}\n']
+        output += [f'Total size: {get_psize(total)}']
     with open(PREVIEW_FIFO, 'w') as fifo:
         fifo.write('\n'.join(output + files))
 
@@ -302,7 +304,6 @@ def main():
 
 
 def update(args):
-    import subprocess as sp
     os.chdir(ROOT)
     for script in ['get_posts.py', 'get_files.py']:
         print(f'>>> Running {script}')
@@ -322,6 +323,7 @@ if __name__ == '__main__':
             raise FileExistsError(FIFO)
 
         if not os.path.exists(FILES_DB):
+            print(f'{FILES_DB} not found, creating it...')
             update(args)
 
         try:

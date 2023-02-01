@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 from utils import *
 from sys import argv, stdout, exit
+from threading import Thread
+from time import sleep
+import json
+import signal
+import subprocess as sp
 import re
+import traceback
 
 SCRIPT = os.path.realpath(__file__)
 FIFO = '/tmp/anitsu.fifo'
@@ -9,39 +15,33 @@ PREVIEW_FIFO = '/tmp/anitsu.preview.fifo'
 UB_FIFO = '/tmp/anitsu.ueberzug.fifo'
 RE_EXT = re.compile(r'.*\.(?:mkv|avi|mp4|webm|ogg|mov|rmvb|mpg|mpeg)$')
 
-if len(argv) == 1:
-    from threading import Thread
-    from time import sleep
-    import json
-    import signal
-    import subprocess as sp
+has_ueberzug = False
+try:
+    if os.getenv('DISPLAY'):
+        import ueberzug.lib.v0 as ueberzug
+        has_ueberzug = True
+except ImportError:
+    pass
 
-    has_ueberzug = False
-    try:
-        if os.getenv('DISPLAY'):
-            import ueberzug.lib.v0 as ueberzug
-            has_ueberzug = True
-    except ImportError:
-        pass
+PID = os.getpid()
+DL_FILE = os.path.join(f'/tmp/anitsu.{PID}')
+FZF_PID = '/tmp/anitsu.fzf'
+FZF_ARGS = [
+    '-m', '--cycle',
+    '--border', 'none',
+    '--header', 'ctrl-d ctrl-a ctrl-g ctrl-t shift+left shift+right',
+    '--preview-window', 'left:52%:border-none',
+    '--preview', f"printf '%s' {{}} > {PREVIEW_FIFO} && cat {PREVIEW_FIFO}",
+    '--bind', f"enter:reload(printf '%s\\n' {{+}} > {FIFO} && cat {FIFO})+clear-query",
+    '--bind', f"shift-left:reload(printf .. > {FIFO})+clear-query",
+    '--bind', f"shift-right:reload(printf '%s' {{}} > {FIFO})+clear-query",
+    '--bind', f"ctrl-d:execute(printf '%s\\n' download_folder {{+}} > {FIFO})",
+    '--bind', 'ctrl-a:toggle-all',
+    '--bind', 'ctrl-g:first',
+    '--bind', 'ctrl-t:last',
 
-    PID = os.getpid()
-    DL_FILE = os.path.join(f'/tmp/anitsu.{PID}')
-    FZF_PID = '/tmp/anitsu.fzf'
-    FZF_ARGS = [
-        '-m', '--cycle',
-        '--border', 'none',
-        '--header', 'ctrl-d ctrl-a ctrl-g ctrl-t shift+left shift+right',
-        '--preview', f'python3 {SCRIPT} preview {{}}',
-        '--preview-window', 'left:52%:border-none',
-        '--bind', f'enter:reload(python3 {SCRIPT} reload {{+}})+clear-query',
-        '--bind', f'ctrl-d:execute(python3 {SCRIPT} download_folder {{+}})',
-        '--bind', 'ctrl-a:toggle-all',
-        '--bind', 'ctrl-g:first',
-        '--bind', 'ctrl-t:last',
-        '--bind', f'shift-left:reload(python3 {SCRIPT} reload ..)+clear-query',
-        '--bind', f'shift-right:reload(python3 {SCRIPT} reload {{}})+clear-query'
-    ]
-    ARIA2_ARGS = ['-j', '2']
+]
+ARIA2_ARGS = ['-j', '2']
 
 
 def get_psize(size):
@@ -102,49 +102,24 @@ def cleanup():
             threads.append(t)
 
 
-def download_folder(args):
-    with open(FIFO, 'w') as fifo:
-        fifo.write('\n'.join(args))
-
-
-def reload(args):
-    """ Receive a key from the FIFO and output it's items to fzf """
-
-    with open(FIFO, 'w') as fifo:
-        fifo.write('\n'.join(args))
-
-    with open(FIFO, 'r') as fifo:
-        data = fifo.read()
-
-    for i in [i for i in data.split('\n') if i]:
-        stdout.write(f'{i}\n')
-
-
-def preview(arg):
-    """ List files and send the post image to ueberzug FIFO """
-
-    with open(PREVIEW_FIFO, 'w') as fifo:
-        fifo.write(f'{arg}\n')
-
-    with open(PREVIEW_FIFO, 'r') as fifo:
-        data = fifo.read().split('\n')
-
-    has_ueberzug = os.path.exists(UB_FIFO)
-    if has_ueberzug:
-        stdout.write('\n' * 22)
+def preview(arg: str, files: list):
+    """ List files and send back to fzf and the post image to ueberzug """
+    output = ['\n' * 22] if has_ueberzug else [] 
 
     try:
         post_id = re.search(r' \(post-(\d+)\)$', arg).group(1)
         img = os.path.join(IMG_DIR, f'{post_id}.jpg')
+        if os.path.exists(img) and has_ueberzug:
+            open(UB_FIFO, 'w').write(img)
     except AttributeError:
-        img = ''
+        pass
 
     total = 0
-    data = sorted(data, key=lambda x: isinstance(
+    files = sorted(files, key=lambda x: isinstance(
         re.match(r'.*\(size-\d+\)', x), re.Match
     ))  # directories first
-    for i in range(len(data)):
-        s = data[i].strip()
+    for i in range(len(files)):
+        s = files[i].strip()
         try:
             size = int(re.search(r' \(size-(\d+)\)$', s).group(1))
             total += size
@@ -154,15 +129,12 @@ def preview(arg):
         except AttributeError:  # is a directory
             s = re.sub(r' \((?:size|post)-.*$', '', s)
             s = f'{BLU}{s}{END}'
-        data[i] = s
+        files[i] = s
 
     if total > 0:
-        stdout.write(f'Total size: {get_psize(total)}\n')
-    stdout.write('\n'.join(data))
-    stdout.flush()
-
-    if os.path.exists(img) and has_ueberzug:
-        open(UB_FIFO, 'w').write(img)
+        output += [f'Total size: {get_psize(total)}\n']
+    with open(PREVIEW_FIFO, 'w') as fifo:
+        fifo.write('\n'.join(output + files))
 
 
 def ueberzug_fifo():
@@ -204,30 +176,32 @@ def preview_fifo():
     main_k = None
     while os.path.exists(PREVIEW_FIFO):
         with open(PREVIEW_FIFO, 'r') as fifo:
-            data = fifo.read()
+            k = fifo.read()
 
-        if len(data) == 0:
+        if len(k) == 0:
             return
 
         output = list()
-        for k in [i for i in data.split('\n') if i]:
-            if k == '..':
-                break
-            elif k in db:
-                main_k = k
-                if isinstance(db[k], dict):
-                    output = [i for i in db[k]]
-            elif k in db[main_k]:
-                if isinstance(db[main_k][k], dict):
-                    output = [i for i in db[main_k][k]]
-            else:
-                output = rec(k, db[main_k])
+        if k == '..':
+            break
+        elif k in db:
+            main_k = k
+            if isinstance(db[k], dict):
+                output = [i for i in db[k]]
+        elif k in db[main_k]:
+            if isinstance(db[main_k][k], dict):
+                output = [i for i in db[main_k][k]]
+        else:
+            output = rec(k, db[main_k])
 
         if not output and k != '..':
             output = [k]
 
-        with open(PREVIEW_FIFO, 'w') as fp:
-            fp.write('\n'.join(output[:80]))
+        try:
+            preview(k, output[:80])
+        except Exception:
+            with open('error.log', 'w') as fp:
+                traceback.print_exc(file=fp)
 
 
 def find_files(data):
@@ -364,12 +338,6 @@ if __name__ == '__main__':
             print('bye ^-^')
     elif 'update' in args:
         update(args)
-    elif 'download_folder' in args:
-        download_folder(args[1:])
-    elif 'preview' in args:
-        preview(args[1])
-    elif 'reload' in args:
-        reload(args[1:])
     else:
         script = SCRIPT.split('/')[-1]
         print(f'Usage: {script} [update -i --download-images]')

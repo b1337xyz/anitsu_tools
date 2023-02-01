@@ -32,8 +32,8 @@ FZF_ARGS = [
     '--preview-window', 'left:52%:border-none',
     '--preview', f"printf '%s' {{}} > {PREVIEW_FIFO} && cat {PREVIEW_FIFO}",
     '--bind', f"enter:reload(printf '%s\\n' {{+}} > {FIFO} && cat {FIFO})+clear-query",
-    '--bind', f"shift-left:reload(printf .. > {FIFO})+clear-query",
-    '--bind', f"shift-right:reload(printf '%s' {{}} > {FIFO})+clear-query",
+    '--bind', f"ctrl-h:reload(printf .. > {FIFO} && cat {FIFO})+clear-query",
+    '--bind', f"ctrl-l:reload(printf '%s' {{}} > {FIFO} && cat {FIFO})+clear-query",
     '--bind', f"ctrl-d:execute(printf '%s\\n' download_folder {{+}} > {FIFO})",
     '--bind', 'ctrl-a:toggle-all',
     '--bind', 'ctrl-g:first',
@@ -178,9 +178,11 @@ def preview_fifo():
         if len(k) == 0:
             return
 
-        output = list()
+        output = []
         if k == '..':
-            break
+            with open(PREVIEW_FIFO, 'w') as fifo:
+                fifo.write('')
+            continue
         elif k in db:
             main_k = k
             if isinstance(db[k], dict):

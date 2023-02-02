@@ -4,7 +4,6 @@ from aiohttp import ClientSession
 import aiofiles
 import asyncio
 import json
-import os
 import subprocess as sp
 
 Q_SIZE = 15

@@ -8,7 +8,7 @@ import os
 import subprocess as sp
 
 Q_SIZE = 15
-counter = 1
+counter = 0
 
 
 async def download(queue):

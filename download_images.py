@@ -8,9 +8,11 @@ import os
 import subprocess as sp
 
 Q_SIZE = 15
+counter = 1
 
 
 async def download(queue):
+    global counter
     while True:
         url, image_path = await queue.get()
         async with session.get(url) as resp:
@@ -29,11 +31,14 @@ async def download(queue):
                 ])
             except Exception:
                 os.remove(image_path)
+
+        counter += 1
+        pbar(counter, qsize)
         queue.task_done()
 
 
 async def main():
-    global session
+    global session, qsize
 
     with open(DB, 'r') as fp:
         db = json.load(fp)
@@ -50,6 +55,7 @@ async def main():
         if qsize == 0:
             return
         print(f'{qsize} images to download, please wait...')
+        pbar(counter, qsize)
         tasks = []
         for _ in range(Q_SIZE):
             tasks += [asyncio.create_task(download(queue))]
@@ -64,3 +70,5 @@ if __name__ == '__main__':
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+    finally:
+        print()

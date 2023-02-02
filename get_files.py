@@ -10,6 +10,8 @@ import random
 import asyncio
 import json
 import re
+import traceback
+from sys import stderr
 
 Q_SIZE = 20
 MAX_ATTEMPTS = 3
@@ -18,10 +20,7 @@ RE_GD_FILEID = re.compile(r'(?:[\?&]id=([^&$]*)|/file/d/([^/\?$]*))')
 UNITS = {"B": 1, "K": 10**3, "M": 10**6, "G": 10**9, "T": 10**12}
 HAS_GDRIVE = which('gdrive')
 HAS_RCLONE = which('rclone')
-
-
-async def random_sleep():
-    await asyncio.sleep(random.random() * .5)
+counter = 1
 
 
 def tree():
@@ -35,12 +34,17 @@ def set_value(root, path, value):
 
 
 def parse_size(size):
+    # https://stackoverflow.com/questions/42865724/parse-human-readable-filesizes-into-bytes
     unit = size[-1]
     number = size[:-1]
     return int(float(number) * UNITS[unit])
 
 
-async def google_drive(k, url):
+async def random_sleep():
+    await asyncio.sleep(random.random() * .5)
+
+
+async def google_drive(key, url):
     if '/folders/' in url and HAS_RCLONE:
         ID = RE_GD_FOLDERID.search(url).group(1)
         try:
@@ -49,10 +53,11 @@ async def google_drive(k, url):
                 '--files-only', '--no-modtime', '--no-mimetype',
                 '--drive-root-folder-id', ID, 'Anitsu:'
             ]), stdout=asyncio.subprocess.PIPE)
-            stdout, _ = await p.communicate()
-            data = json.loads(stdout.decode())
-        except Exception as err:
-            print(f'{k = }\n{err = }\n{url = }')
+            out, _ = await p.communicate()
+            data = json.loads(out.decode())
+        except Exception:
+            traceback.print_exc(file=stderr)
+            print(f'{RED}{key = }\n{url = }{END}')
             return
 
         root = tree()
@@ -63,13 +68,9 @@ async def google_drive(k, url):
             path[-1] = f'{path[-1]} (size-{size})'
             set_value(root, path, dl_link)
     else:
-        if '/file/' in url:
-            ID = RE_GD_FILEID.search(url).group(2)
-        elif 'id=' in url:
-            ID = RE_GD_FILEID.search(url).group(1)
-
+        ID = RE_GD_FILEID.search(url).group(1 if 'id=' in url else 2)
         if not ID:
-            print(f'FILEID not found: {url = }')
+            print(f'{YEL}FILEID not found, {key = }\n{url = }{END}')
             return
 
         if HAS_GDRIVE:
@@ -78,28 +79,33 @@ async def google_drive(k, url):
                 p = await asyncio.create_subprocess_shell(' '.join([
                     'gdrive', 'info', '--bytes', ID
                 ]), stdout=asyncio.subprocess.PIPE)
-                stdout, _ = await p.communicate()
-                stdout = stdout.decode()
-            except Exception as err:
-                print(f'{k = }\n{err = }\n{url = }')
+                out, _ = await p.communicate()
+                content = out.decode()
+            except Exception:
+                traceback.print_exc(file=stderr)
+                print(f'{RED}{key = }\n{url = }{END}')
                 return
 
             root = tree()
             try:
-                filename = re.search(r'(?:^|\n)Name: ([^\n]*)', stdout).group(1)
-                size = re.search(r'(?:^|\n)Size: (\d+)', stdout).group(1)
-                dl_link = re.search(r'(?:^|\n)DownloadUrl: ([^\n]*)', stdout).group(1)
-            except Exception as err:
-                print(f'{k = }\n{err = }\n{url = }')
+                filename = re.search(r'(?:^|\n)Name: ([^\n]*)',
+                                     content).group(1)
+                size = re.search(r'(?:^|\n)Size: (\d+)',
+                                 content).group(1)
+                dl_link = re.search(r'(?:^|\n)DownloadUrl: ([^\n]*)',
+                                    content).group(1)
+            except Exception:
+                traceback.print_exc(file=stderr)
+                print(f'{RED}{key = }\n{url = }{END}')
                 return
             filename = f'{filename} (size-{size})'
         else:
             url = f'https://drive.google.com/uc?id={ID}&export=download'
             async with session.get(url) as r:
-                out = await r.text()
+                content = await r.text()
 
-            if 'Too many users have viewed or downloaded this file recently' in out:
-                print(f'{out = }\n{k = }\n{url = }')
+            if 'too many users have viewed or downloaded this' in out.lower():
+                print(f'{YEL}{content = }\n{key = }\n{url = }{END}')
                 return
 
             root = tree()
@@ -110,10 +116,10 @@ async def google_drive(k, url):
                     r'href\=\"\/open.*?>([^<]+)\<\/a\> \((\d+.)\)', out
                 ).group(1, 2)
 
-                # https://stackoverflow.com/questions/42865724/parse-human-readable-filesizes-into-bytes
                 size = parse_size(size)
-            except Exception as err:
-                print(f'{out = }\n{k = }\n{err = }\n{url = }')
+            except Exception:
+                traceback.print_exc(file=stderr)
+                print(f'{RED}{content = }\n{key = }\n{url = }{END}')
                 return
 
         dl_link = f'https://drive.google.com/uc?id={ID}&export=download&confirm=t'
@@ -121,10 +127,10 @@ async def google_drive(k, url):
         root[filename] = dl_link
 
     # print(json.dumps(root, indent=2))
-    db[k]['gdrive'][url] = root
+    db[key]['gdrive'][url] = root
 
 
-async def nextcloud(k, url, password=''):
+async def nextcloud(key, url, password=''):
     user = url.split('/')[-1]
     domain = url.split("/")[0]
     webdav = f'{domain}/nextcloud/public.php/webdav'
@@ -132,12 +138,15 @@ async def nextcloud(k, url, password=''):
     att = 0
     while att < MAX_ATTEMPTS:
         try:
-            async with session.request(method='PROPFIND', url=f'https://{webdav}', auth=auth, headers={'Depth': 'infinity'}) as r:
+            async with session.request(method='PROPFIND',
+                                       url=f'https://{webdav}', auth=auth,
+                                       headers={'Depth': 'infinity'}) as r:
                 xml = await r.text()
                 if r.status in [200, 207]:
                     break
-        except Exception as err:
-            print(f'{err = }\n{url}')
+        except Exception:
+            traceback.print_exc(file=stderr)
+            print(f'{RED}{url}{END}')
         att += 1
         await random_sleep()
     else:
@@ -151,18 +160,12 @@ async def nextcloud(k, url, password=''):
         if not href:
             continue
         path = href[0].firstChild.data.split('webdav')[-1][1:]
-
-        if not path:
-            # hopefully the first item of this loop... :-)
-            # total = size
-            continue
-
-        if path.endswith('/'):
-            continue
+        if not path or path.endswith('/'):
+            continue  # hopefully the first item of this loop... :-)
 
         prop = e.getElementsByTagName('d:prop')[0]
         size = prop.getElementsByTagName('d:getcontentlength')
-        size = size[0].firstChild.data
+        size = int(size[0].firstChild.data)
 
         dl_link = f'https://{user}:{password}@{webdav}/{path}'
         path = path.split('/')
@@ -171,10 +174,12 @@ async def nextcloud(k, url, password=''):
 
     if not root and 'contenttype>video/' in xml:
         try:
-            async with session.request(method='HEAD', url=f'https://{webdav}', auth=auth) as r:
+            async with session.request(method='HEAD', url=f'https://{webdav}',
+                                       auth=auth) as r:
                 content = r.headers['content-disposition']
-        except Exception as err:
-            print(f'{err = }\n{url}')
+        except Exception:
+            traceback.print_exc(file=stderr)
+            print(f'{RED}{key = }\n{url}{END}')
             return
         dl_link = f'https://{user}:{password}@{webdav}/'
         size = re.search(r'd:getcontentlength>(\d+)<', xml).group(1)
@@ -182,21 +187,23 @@ async def nextcloud(k, url, password=''):
         filename = f'{unquote(filename)} (size-{size})'
         root[filename] = dl_link
 
-    db[k]['nextcloud'][url] = root
+    # print(json.dumps(root, indent=2))
+    db[key]['nextcloud'][url] = root
 
 
 async def q_handler(queue: asyncio.Queue):
+    global counter
     while True:
         k, url = await queue.get()
-        pw = ''
-        if 'password' in db[k]:
-            pw = db[k]['password']
 
         if '/nextcloud/' in url:
+            pw = '' if 'password' not in db[k] else db[k]['password']
             await nextcloud(k, url, pw)
         elif 'drive.google' in url:
             await google_drive(k, url)
 
+        counter += 1
+        pbar(counter, qsize)
         await random_sleep()
         queue.task_done()
 
@@ -218,6 +225,7 @@ async def main():
 
         qsize = queue.qsize()
         print(f'{qsize} items to update, please wait...')
+        pbar(counter, qsize)
         tasks = []
         for _ in range(Q_SIZE):
             tasks += [asyncio.create_task(q_handler(queue))]
@@ -226,8 +234,10 @@ async def main():
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
 
+    print()
     with open(DB, 'w') as fp:
         json.dump(db, fp)
+
 
     files = dict()
     for k, v in db.items():

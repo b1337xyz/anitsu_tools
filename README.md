@@ -107,3 +107,11 @@ python3 anitsu-cli.py  # -i or --download-images to download images
 
 ## What you can do with this...
 ![gif](assets/demo.gif)
+
+---
+#### TODO
+[ ] - Improve file tree structure.
+[ ] - Save directory size and total.
+[ ] - Add alternatives to ueberzug (anitsu-cli.py).
+[ ] - Add alternatives to aria2 (maybe use its rpc?) (anitsu-cli.py).
+[ ] - ~~Write meaningful commits.~~

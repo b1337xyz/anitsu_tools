@@ -19,16 +19,23 @@ except ImportError:
 
 PID = os.getpid()
 SCRIPT = os.path.realpath(__file__)
+NAME = SCRIPT.split('/')[-1]
 RE_EXT = re.compile(r'.*\.(?:mkv|avi|mp4|webm|ogg|mov|rmvb|mpg|mpeg)$')
 DL_FILE = os.path.join(f'/tmp/anitsu.{PID}')
 FIFO = f'/tmp/anitsu.{PID}.fifo'
 PREVIEW_FIFO = f'/tmp/anitsu.preview.{PID}.fifo'
 UB_FIFO = f'/tmp/anitsu.ueberzug.{PID}.fifo'
 FZF_PID = f'/tmp/anitsu.{PID}.fzf'
+
+PROMPT = f'{NAME}> '
+HEADER = '''ctrl-d download ctrl-a toggle selection
+ctrl-g bottom   ctrl-t top
+ctrl-h back     ctrl-l foward'''
 FZF_ARGS = [
     '-m', '--cycle',
     '--border', 'none',
-    '--header', 'ctrl-d ctrl-a ctrl-g ctrl-t ctrl-h ctrl-l',
+    '--prompt', PROMPT,
+    '--header', HEADER,
     '--preview-window', 'left:52%:border-none',
     '--preview', f"printf '%s' {{}} > {PREVIEW_FIFO} && cat {PREVIEW_FIFO}",
     '--bind', f"enter:reload(printf '%s\\n' {{+}} > {FIFO} && cat {FIFO})+clear-query",
@@ -121,10 +128,14 @@ def ueberzug_fifo():
             pv.visibility = ueberzug.Visibility.VISIBLE
 
 
+def clean_string(string: str) -> str:
+    return re.sub(r' \((?:size|post)-.*$', '', string)
+
+
 def preview(k: str, files: list):
     """ List files and send to fzf and the post image to ueberzug """
 
-    output = ['\n' * 22] if has_ueberzug else []
+    output = ['\n' * 21] if has_ueberzug else []
     try:
         post_id = re.search(r' \(post-(\d+)\)$', k).group(1)
         img = os.path.join(IMG_DIR, f'{post_id}.jpg')
@@ -143,15 +154,15 @@ def preview(k: str, files: list):
             size = int(re.search(r' \(size-(\d+)\)$', s).group(1))
             total += size
             size = get_psize(size)
-            s = re.sub(r' \((?:size|post)-.*$', '', s)
+            s = clean_string(s)
             s = f'{size} {MAG}{s}{END}'
         except AttributeError:  # is a directory
-            s = re.sub(r' \((?:size|post)-.*$', '', s)
+            s = clean_string(s)
             s = f'{BLU}{s}{END}'
         files[i] = s
 
     if total > 0:
-        output += [f'Total size: {get_psize(total)}']
+        output += [f'Total size: {get_psize(total).strip()}']
     with open(PREVIEW_FIFO, 'w') as fifo:
         fifo.write('\n'.join(output + files))
 
@@ -337,5 +348,4 @@ if __name__ == '__main__':
     elif 'update' in args:
         update(args)
     else:
-        script = SCRIPT.split('/')[-1]
-        print(f'Usage: {script} [update -i --download-images]')
+        print(f'Usage: {NAME} [update -i --download-images]')

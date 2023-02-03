@@ -18,7 +18,7 @@ except ImportError:
 PID = os.getpid()
 SCRIPT = os.path.realpath(__file__)
 NAME = SCRIPT.split('/')[-1]
-DL_FILE = os.path.join(f'/tmp/anitsu.{PID}')
+DL_FILE = f'/tmp/anitsu.{PID}'
 FIFO = f'/tmp/anitsu.{PID}.fifo'
 PREVIEW_FIFO = f'/tmp/anitsu.preview.{PID}.fifo'
 UB_FIFO = f'/tmp/anitsu.ueberzug.{PID}.fifo'

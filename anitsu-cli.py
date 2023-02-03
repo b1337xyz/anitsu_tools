@@ -291,14 +291,11 @@ def update(args):
 if __name__ == '__main__':
     args = argv[1:]
     if not args:
-        threads = []
-        if os.path.exists(FIFO):
-            raise FileExistsError(FIFO)
-
         if not os.path.exists(FILES_DB):
             print(f'{FILES_DB} not found, creating it...')
             update(args)
 
+        threads = []
         try:
             main()
         finally:

@@ -2,12 +2,10 @@
 from utils import *
 from sys import argv, exit
 from threading import Thread
-from time import sleep
 import json
 import signal
 import subprocess as sp
 import re
-import traceback
 
 has_ueberzug = False
 try:
@@ -77,35 +75,39 @@ def fzf(args):
 
 
 def kill_fzf():
-    if os.path.exists(FZF_PID):
-        try:
-            with open(FZF_PID, 'r') as fp:
-                pid = int(fp.read().strip())
-            os.kill(pid, signal.SIGTERM)
-        except Exception:
-            pass
-        finally:
-            os.remove(FZF_PID)
+    if not os.path.exists(FZF_PID):
+        return
+
+    try:
+        with open(FZF_PID, 'r') as fp:
+            pid = int(fp.read())
+        os.kill(pid, signal.SIGTERM)
+    except Exception:
+        pass
+    finally:
+        os.remove(FZF_PID)
+
+
+def kill_fifo(fifo: str):
+    if not os.path.exists(fifo):
+        return
+
+    with open(fifo, 'w') as fp:
+        fp.write('')
+
+    try:
+        os.remove(fifo)
+    except FileNotFoundError:
+        pass
 
 
 def cleanup():
     """ Make sure that every FIFO dies and temporary files are deleted """
 
-    sleep(0.3)
-
-    def kill(fifo):
-        with open(fifo, 'w') as fp:
-            fp.write('')
-        try:
-            os.remove(fifo)
-        except FileNotFoundError:
-            pass
-
     for i in [UB_FIFO, PREVIEW_FIFO, FIFO]:
-        if os.path.exists(i):
-            t = Thread(target=kill, args=(i,))
-            t.start()
-            threads.append(t)
+        t = Thread(target=kill_fifo, args=(i,))
+        t.start()
+        threads.append(t)
 
 
 def ueberzug_fifo():
@@ -132,88 +134,58 @@ def clean_string(string: str) -> str:
     return re.sub(r' \((?:size|post)-.*$', '', string)
 
 
-def preview(k: str, files: list):
-    """ List files and send to fzf and the post image to ueberzug """
+def preview(key: str, files: list):
+    """ List files and send to fzf preview and the post image to ueberzug """
 
-    output = ['\n' * 21] if has_ueberzug else []
-    try:
-        post_id = re.search(r' \(post-(\d+)\)$', k).group(1)
-        img = os.path.join(IMG_DIR, f'{post_id}.jpg')
-        if os.path.exists(img) and has_ueberzug:
-            open(UB_FIFO, 'w').write(img)
-    except AttributeError:
-        pass
+    output = []
+    if has_ueberzug:
+        output = ['\n' * 21]
+        try:
+            post_id = re.search(r' \(post-(\d+)\)$', key).group(1)
+            img = os.path.join(IMG_DIR, f'{post_id}.jpg')
+            if os.path.exists(img):
+                with open(UB_FIFO, 'w') as ub_fifo:
+                    ub_fifo.write(img)
+        except AttributeError:
+            pass
 
     total = 0
     files = sorted(files, key=lambda x: isinstance(
         re.match(r'.*\(size-\d+\)', x), re.Match
     ))  # directories first
-    for i in range(len(files)):
-        s = files[i].strip()
+    for i, v in enumerate(files):
         try:
-            size = int(re.search(r' \(size-(\d+)\)$', s).group(1))
+            size = int(re.search(r' \(size-(\d+)\)$', v).group(1))
             total += size
-            size = get_psize(size)
-            s = clean_string(s)
-            s = f'{size} {MAG}{s}{END}'
+            s = f'{get_psize(size)} {MAG}{clean_string(v)}{END}'
         except AttributeError:  # is a directory
-            s = clean_string(s)
-            s = f'{BLU}{s}{END}'
+            s = f'{BLU}{clean_string(v)}{END}'
         files[i] = s
 
     if total > 0:
         output += [f'Total size: {get_psize(total).strip()}']
+
     with open(PREVIEW_FIFO, 'w') as fifo:
         fifo.write('\n'.join(output + files))
 
 
 def preview_fifo():
     """ Preview fifo listener """
-
-    def rec(q, data):
-        """ Recursively find "directories" and return them """
-
-        if q in data:
-            if isinstance(data[q], dict):
-                return [i for i in data[q]]
-            else:
-                return []
-
-        for k in data:
-            if isinstance(data[k], dict):
-                return rec(q, data[k])
-
-    main_k = None
     while os.path.exists(PREVIEW_FIFO):
         with open(PREVIEW_FIFO, 'r') as fifo:
             k = fifo.read()
 
         if len(k) == 0:
             return
-
-        output = []
-        if k == '..':
-            with open(PREVIEW_FIFO, 'w') as fifo:
-                fifo.write('')
+        elif k == '..':  # show nothing
+            open(PREVIEW_FIFO, 'w').write('')
             continue
-        elif k in db:
-            main_k = k
-            if isinstance(db[k], dict):
-                output = [i for i in db[k]]
-        elif k in db[main_k]:
-            if isinstance(db[main_k][k], dict):
-                output = [i for i in db[main_k][k]]
-        else:
-            output = rec(k, db[main_k])
-
-        if not output and k != '..':
+        elif isinstance(db[k], dict):  # is a directory
+            output = [i for i in db[k]]
+        else:  # is a file
             output = [k]
 
-        try:
-            preview(k, output[:80])
-        except Exception:
-            with open('error.log', 'w') as fp:
-                traceback.print_exc(file=fp)
+        preview(k, output[:80])
 
 
 def find_files(data):
@@ -226,10 +198,13 @@ def find_files(data):
 
 def main():
     global db, threads
+    with open(FILES_DB, 'r') as fp:
+        db = json.load(fp)
+
+    keys = sorted(db, reverse=True,
+                  key=lambda x: int(re.search(r'post-(\d+)', x).group(1)))
 
     for i in [FIFO, PREVIEW_FIFO]:
-        if os.path.exists(i):
-            os.remove(i)
         os.mkfifo(i)
 
     if has_ueberzug:
@@ -238,38 +213,27 @@ def main():
         t.start()
         threads.append(t)
 
-    with open(FILES_DB, 'r') as fp:
-        db = json.load(fp)
-
     t = Thread(target=preview_fifo)
     t.start()
     threads.append(t)
 
-    # keys = sorted(db)
-    keys = sorted(db, reverse=True,
-                  key=lambda x: int(re.search(r'post-(\d+)', x).group(1)))
-    t = Thread(target=fzf, args=(keys[::-1],))
+    t = Thread(target=fzf, args=(keys,))
     t.start()
     threads.append(t)
 
-    files = list()
-    old_db = list()
+    old_db = []
+    files = []
     while os.path.exists(FIFO):
         with open(FIFO, 'r') as fifo:
             data = fifo.read()
-            data = [i for i in data.split('\n') if i]
 
         if len(data) == 0:
             break
 
+        data = [i for i in data.split('\n') if i]
         if 'download_folder' in data:
-            data = data[1:]
-            files = []
-            try:
-                for k in data:
-                    files += find_files(db[k])
-            except Exception as err:
-                print(err)
+            for k in data[1:]:
+                files += find_files(db[k])
             break
 
         for k in data:
@@ -278,9 +242,8 @@ def main():
                     db = old_db[-1].copy()
                     del old_db[-1]
                 break
-            elif k in db and k != '..':
-                if not isinstance(db[k], dict):
-                    files.append(db[k])
+            elif k in db and not isinstance(db[k], dict) and k != '..':
+                files.append(db[k])  # ignore .. if selected
 
         if files:
             break
@@ -295,8 +258,10 @@ def main():
         with open(FIFO, 'w') as fifo:
             fifo.write('\n'.join(output))
 
-    if os.path.exists(FIFO):
+    try:
         os.remove(FIFO)
+    except FileNotFoundError:
+        pass
 
     kill_fzf()  # kill fzf and the preview
 

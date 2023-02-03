@@ -18,7 +18,6 @@ except ImportError:
 PID = os.getpid()
 SCRIPT = os.path.realpath(__file__)
 NAME = SCRIPT.split('/')[-1]
-RE_EXT = re.compile(r'.*\.(?:mkv|avi|mp4|webm|ogg|mov|rmvb|mpg|mpeg)$')
 DL_FILE = os.path.join(f'/tmp/anitsu.{PID}')
 FIFO = f'/tmp/anitsu.{PID}.fifo'
 PREVIEW_FIFO = f'/tmp/anitsu.preview.{PID}.fifo'
@@ -48,9 +47,8 @@ ARIA2_ARGS = ['-j', '2']
 
 
 def get_psize(size):
-    units = ["KB", "MB", "GB", "TB", "PB"]
     psize = f"{size} B"
-    for i in units:
+    for i in 'BMG':
         if size < 1000:
             break
         size /= 1000
@@ -62,8 +60,7 @@ def fzf(args):
     try:
         proc = sp.Popen(
             ["fzf"] + FZF_ARGS,
-            stdin=sp.PIPE,
-            stdout=sp.PIPE,
+            stdin=sp.PIPE, stdout=sp.PIPE,
             universal_newlines=True
         )
         open(FZF_PID, 'w').write(str(proc.pid))

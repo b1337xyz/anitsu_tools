@@ -83,7 +83,7 @@ async def update_db(posts):
         db[post_id]['url'] = post['link']
         db[post_id]['date'] = post['date']
         db[post_id]['modified'] = modified
-        db[post_id]['is_release'] = '[em lançamento' in content.lower()
+        db[post_id]['is_release'] = 'em lançamento' in content.lower()
         db[post_id]['image'] = os.path.join(IMG_DIR, f'{post_id}.jpg')
         db[post_id]['image_url'] = regex(RE_IMG, content)
         db[post_id]['malid'] = regex(RE_MAL, content)
@@ -109,26 +109,16 @@ async def update_db(posts):
 
 async def get_posts(queue):
     while True:
-        page = await queue.get()
-        url = WP_URL.format(page, last_run)
-        att = 0
-        while att < MAX_ATTEMPTS:
-            try:
-                async with session.get(url) as r:
-                    if r.status == 200:
-                        posts = await r.json()
-                        break
-            except Exception as err:
-                print(f'{RED}{err}{END}\n{url}')
-            att += 1
-            await random_sleep()
+        url = await queue.get()
+        async with session.get(url) as r:
+            posts = await r.json()
         await update_db(posts)
         await random_sleep()
         queue.task_done()
 
 
 async def main():
-    global session, db, last_run
+    global session, db
     try:
         with open(DB, 'r') as fp:
             db = json.load(fp)
@@ -165,7 +155,7 @@ async def main():
         await update_db(posts)
         queue = asyncio.Queue()
         for p in range(2, total_pages + 1):
-            queue.put_nowait(p)
+            queue.put_nowait(WP_URL.format(page, last_run))
 
         tasks = []
         for _ in range(Q_SIZE):

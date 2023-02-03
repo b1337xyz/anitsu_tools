@@ -253,7 +253,6 @@ async def main():
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
 
-    print()
     with open(DB, 'w') as fp:
         json.dump(db, fp)
 

@@ -19,7 +19,6 @@ RE_ANI = re.compile(r'anilist\.co/\w*/(\d*)')
 RE_NXC = re.compile(r'//([^/]*/nextcloud/\w/[^\?\"]+)')
 RE_GDR = re.compile(r'href=\"(https://drive\.google[^\"]*)')
 RE_PASS = re.compile(r'Senha: <span[^>]*>(.*)</span')
-MAX_ATTEMPTS = 3
 Q_SIZE = 10
 
 

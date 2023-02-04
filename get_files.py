@@ -6,15 +6,13 @@ from html import unescape
 from collections import defaultdict
 from xml.dom import minidom
 from shutil import which
+from sys import stderr
 import random
 import asyncio
 import json
 import re
-import traceback
-from sys import stderr
 
 Q_SIZE = 20
-MAX_ATTEMPTS = 3
 RE_GD_FOLDERID = re.compile(r'/folders/([^\?$/]*)')
 RE_GD_FILEID = re.compile(r'(?:[\?&]id=([^&$]*)|/file/d/([^/\?$]*))')
 UNITS = {"B": 1, "K": 10**3, "M": 10**6, "G": 10**9, "T": 10**12}
@@ -64,7 +62,7 @@ async def gd_get_file(file_id: str) -> str:
         out, _ = await p.communicate()
         return out.decode()
 
-    url = f'https://drive.google.com/uc?id={file_id}&export=download'
+    url = GD_LINK.format(file_id)
     async with session.get(url) as r:
         return await r.text()
 
@@ -77,13 +75,7 @@ async def google_drive(key: str, url: str):
             return
 
         folder_id = RE_GD_FOLDERID.search(url).group(1)
-        try:
-            data = await gd_get_folder(folder_id)
-        except Exception:
-            traceback.print_exc(file=stderr)
-            print(f'{RED}{key = }\n{url = }{END}')
-            return
-
+        data = await gd_get_folder(folder_id)
         for file in data:
             size = file['Size']
             dl_link = GD_LINK.format(file["ID"])
@@ -92,31 +84,15 @@ async def google_drive(key: str, url: str):
             set_value(root, path, dl_link)
     else:
         file_id = RE_GD_FILEID.search(url).group(1 if 'id=' in url else 2)
-        try:
-            content = await gd_get_file(file_id)
-        except Exception:
-            traceback.print_exc(file=stderr)
-            print(f'{RED}{key = }\n{url = }{END}')
-            return
-
+        content = await gd_get_file(file_id)
         if HAS_GDRIVE:
-            try:
-                filename = re.search(r'(?:^|\n)Name: ([^\n]*)', content).group(1)
-                size = re.search(r'(?:^|\n)Size: (\d+)', content).group(1)
-            except Exception:
-                traceback.print_exc(file=stderr)
-                print(f'{RED}{key = }\n{url = }{END}')
-                return
+            filename = re.search(r'(?:^|\n)Name: ([^\n]*)', content).group(1)
+            size = re.search(r'(?:^|\n)Size: (\d+)', content).group(1)
         else:
-            try:
-                filename, size = re.search(
-                    r'href\=\"\/open.*?>([^<]+)\<\/a\> \((\d+.)\)', content
-                ).group(1, 2)
-                size = parse_size(size)
-            except Exception:
-                traceback.print_exc(file=stderr)
-                print(f'{RED}{content = }\n{key = }\n{url = }{END}')
-                return
+            filename, size = re.search(
+                r'href\=\"\/open.*?>([^<]+)\<\/a\> \((\d+.)\)', content
+            ).group(1, 2)
+            size = parse_size(size)
 
         dl_link = GD_LINK.format(file_id)
         filename = f'{unescape(filename)} (size-{size})'
@@ -131,23 +107,13 @@ async def nextcloud(key: str, url: str, password=''):
     domain = url.split("/")[0]
     webdav = f'{domain}/nextcloud/public.php/webdav'
     auth = BasicAuth(user, password)
-    att = 0
-    while att < MAX_ATTEMPTS:
-        try:
-            async with session.request(method='PROPFIND',
-                                       url=f'https://{webdav}', auth=auth,
-                                       headers={'Depth': 'infinity'}) as r:
-                xml = await r.text()
-                if r.status in [200, 207]:
-                    break
-        except Exception:
-            traceback.print_exc(file=stderr)
-            print(f'{RED}{url}{END}')
-        att += 1
-        await random_sleep()
-    else:
-        return
-
+    async with session.request(method='PROPFIND', auth=auth,
+                               url=f'https://{webdav}',
+                               headers={'Depth': 'infinity'}) as r:
+        if r.status not in [200, 207]:
+            print(f'{RED}{key = }, {r.status = }, {url = }{END}')
+            return
+        xml = await r.text()
     dom = minidom.parseString(xml)
 
     root = tree()
@@ -169,15 +135,10 @@ async def nextcloud(key: str, url: str, password=''):
         set_value(root, path, dl_link)
 
     if not root and 'contenttype>video/' in xml:
-        try:
-            async with session.request(method='HEAD', url=f'https://{webdav}',
-                                       auth=auth) as r:
-                content = r.headers['content-disposition']
-                size = r.headers['content-length']
-        except Exception:
-            traceback.print_exc(file=stderr)
-            print(f'{RED}{key = }\n{url}{END}')
-            return
+        async with session.request(method='HEAD', auth=auth,
+                                   url=f'https://{webdav}') as r:
+            content = r.headers['content-disposition']
+            size = r.headers['content-length']
         dl_link = f'https://{user}:{password}@{webdav}/'
         # size = re.search(r'd:getcontentlength>(\d+)<', xml).group(1)
         filename = re.search(r'filename=\"([^\"]*)', content).group(1)

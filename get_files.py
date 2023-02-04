@@ -177,11 +177,8 @@ def gen_only_files(db: dict):
         for v2 in v['gdrive'].values():
             files[s].update(v2)
 
-    def count(data):
-        t = 0
-        for k in data:
-            t += count(data[k]) if isinstance(data[k], dict) else 1
-        return t
+    def count(d: dict) -> int:
+        return sum(1 if not isinstance(d[k], dict) else count(d[k]) for k in d)
 
     print(count(files), 'files')
     with open(FILES_DB, 'w') as fp:

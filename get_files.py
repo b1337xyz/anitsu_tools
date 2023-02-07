@@ -8,7 +8,7 @@ from collections import defaultdict
 from xml.dom import minidom
 from shutil import which
 from sys import stderr
-import traceback
+import traceback  # noqa: F401
 import random
 import asyncio
 import json

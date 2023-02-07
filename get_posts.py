@@ -154,7 +154,7 @@ async def main():
         await update_db(posts)
         queue = asyncio.Queue()
         for p in range(2, total_pages + 1):
-            queue.put_nowait(WP_URL.format(page, last_run))
+            queue.put_nowait(WP_URL.format(p, last_run))
 
         tasks = []
         for _ in range(Q_SIZE):

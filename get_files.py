@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 from utils import *
 from aiohttp import ClientSession, BasicAuth
+from aiohttp.client_exceptions import ClientConnectorError
 from urllib.parse import unquote
 from html import unescape
 from collections import defaultdict
 from xml.dom import minidom
 from shutil import which
 from sys import stderr
+import traceback
 import random
 import asyncio
 import json
@@ -107,13 +109,18 @@ async def nextcloud(key: str, url: str, password=''):
     domain = url.split("/")[0]
     webdav = f'{domain}/nextcloud/public.php/webdav'
     auth = BasicAuth(user, password)
-    async with session.request(method='PROPFIND', auth=auth,
-                               url=f'https://{webdav}',
-                               headers={'Depth': 'infinity'}) as r:
-        if r.status not in [200, 207]:
-            print(f'{RED}{key = }, {r.status = }, {url = }{END}')
-            return
-        xml = await r.text()
+    try:
+        async with session.request(method='PROPFIND', auth=auth,
+                                   url=f'https://{webdav}',
+                                   headers={'Depth': 'infinity'}) as r:
+            if r.status not in [200, 207]:
+                print(f'{RED}{key = }, {r.status = }, {url = }{END}')
+                return
+            xml = await r.text()
+    except ClientConnectorError:
+        print(f'{RED}{key = }\nhttps://{url}{END}')
+        return
+
     dom = minidom.parseString(xml)
 
     root = tree()

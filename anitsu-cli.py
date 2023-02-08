@@ -2,6 +2,7 @@
 from utils import *
 from sys import argv, exit
 from threading import Thread
+from shutil import which
 import json
 import signal
 import subprocess as sp
@@ -14,6 +15,8 @@ try:
         has_ueberzug = True
 except ImportError:
     pass
+has_viu = which('viu')
+has_chafa = which('chafa')
 
 PID = os.getpid()
 SCRIPT = os.path.realpath(__file__)
@@ -133,18 +136,24 @@ def clean_string(string: str) -> str:
 
 def preview(key: str, files: list):
     """ List files and send to fzf preview and the post image to ueberzug """
+    try:
+        post_id = re.search(r' \(post-(\d+)\)$', key).group(1)
+        img = os.path.join(IMG_DIR, f'{post_id}.jpg')
+    except AttributeError:
+        img = ''
 
     output = []
-    if has_ueberzug:
-        output = ['\n' * 21]
-        try:
-            post_id = re.search(r' \(post-(\d+)\)$', key).group(1)
-            img = os.path.join(IMG_DIR, f'{post_id}.jpg')
-            if os.path.exists(img):
-                with open(UB_FIFO, 'w') as ub_fifo:
-                    ub_fifo.write(img)
-        except AttributeError:
-            pass
+    if os.path.exists(img):
+        if has_ueberzug:
+            output = ['\n' * 21]
+            with open(UB_FIFO, 'w') as ub_fifo:
+                ub_fifo.write(img)
+        elif has_viu:
+            output += [sp.run(['viu', '-s', '-w', '32', '-h', '20', img],
+                         stdout=sp.PIPE).stdout.decode()]
+        elif has_chafa:
+            output += [sp.run(['chafa', f'--size=32x20', img],
+                         stdout=sp.PIPE).stdout.decode()]
 
     total = 0
     files = sorted(files, key=lambda x: isinstance(

@@ -48,6 +48,9 @@ FZF_ARGS = [
 ]
 ARIA2_ARGS = ['-j', '2']
 
+WIDTH = 36  # preview width
+HEIGHT = 24
+
 
 def get_psize(size):
     psize = f"{size} B"
@@ -116,7 +119,7 @@ def ueberzug_fifo():
     # https://github.com/b1337xyz/ueberzug#python
     with ueberzug.Canvas() as canvas:
         pv = canvas.create_placement(
-            'pv', x=0, y=0, width=32, height=20,
+            'pv', x=0, y=0, width=WIDTH, height=HEIGHT,
             scaler=ueberzug.ScalerOption.DISTORT.value
         )
         while os.path.exists(UB_FIFO):
@@ -149,11 +152,11 @@ def preview(key: str, files: list):
             with open(UB_FIFO, 'w') as ub_fifo:
                 ub_fifo.write(img)
         elif has_viu:
-            output += [sp.run(['viu', '-s', '-w', '32', '-h', '20', img],
-                         stdout=sp.PIPE).stdout.decode()]
+            output += [sp.run(['viu', '-w', str(WIDTH), '-h', str(HEIGHT), img],
+                              stdout=sp.PIPE).stdout.decode()]
         elif has_chafa:
-            output += [sp.run(['chafa', f'--size=32x20', img],
-                         stdout=sp.PIPE).stdout.decode()]
+            output += [sp.run(['chafa', f'--size={WIDTH}x{HEIGHT}', img],
+                              stdout=sp.PIPE).stdout.decode()]
 
     total = 0
     files = sorted(files, key=lambda x: isinstance(

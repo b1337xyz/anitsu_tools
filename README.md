@@ -7,13 +7,15 @@
     - [requests](https://requests.readthedocs.io/en/latest/)
     - [aiohttp](https://github.com/aio-libs/aiohttp)
     - [aiofiles](https://github.com/Tinche/aiofiles) - `download_images.py`
-    - [ueberzug](https://github.com/b1337xyz/ueberzug) (optional) - `anitsu-cli.py` image support
+    - [ueberzug](https://github.com/b1337xyz/ueberzug) (optional) - `anitsu-cli.py` image preview
 - programs
     - [aria2](https://aria2.github.io/) - download utility
     - [fzf](https://github.com/junegunn/fzf) - `anitsu-cli.py`
     - [imagemagick](https://github.com/ImageMagick/ImageMagick) - converts images to jpeg in `download_images.py`
     - [rclone](https://rclone.org) - get files from google drive folders (`get_files.py`)
     - [gdrive](https://github.com/prasmussen/gdrive) (optional) - for more accurate results from google drive links (`get_files.py`)
+    - [viu](https://github.com/atanunq/viu#from-source-recommended) (optional) - image preview
+    - [chafa](https://hpjansson.org/chafa/) (optional) - image preview
 
 ## Setup
 
@@ -112,6 +114,6 @@ python3 anitsu-cli.py  # -i or --download-images to download images
 #### TODO
 - [ ] Improve file tree structure.
 - [ ] Save directory size and total.
-- [ ] Add alternatives to ueberzug (anitsu-cli.py).
+- [x] Add alternatives to ueberzug (anitsu-cli.py).
 - [ ] Add alternatives to aria2 (maybe use its rpc?) (anitsu-cli.py).
 - [ ] ~~Write meaningful commits.~~

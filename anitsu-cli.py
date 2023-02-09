@@ -207,11 +207,12 @@ def find_files(data: dict) -> list:
     return files
 
 
-def files_only(d: dict, out={}) -> dict:
+def files_only(d: dict) -> dict:
     """ Recursively find "files" and return them as {key: value, ...} """
+    out = dict()
     for k in d:
         if isinstance(d[k], dict):
-            files_only(d[k], out)
+            out.update(files_only(d[k]))
         else:
             out[k] = d[k]
     return out

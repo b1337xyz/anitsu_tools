@@ -29,7 +29,7 @@ UB_FIFO = f'/tmp/anitsu.ueberzug.{PID}.fifo'
 FZF_PID = f'/tmp/anitsu.{PID}.fzf'
 
 PROMPT = f'{NAME}> '
-HEADER = '''^d download ^a toggle all ^f toggle files only 
+HEADER = '''^d download ^a toggle all ^f toggle files only
 ^g bottom   ^t top        ^h back  ^l foward'''
 FZF_ARGS = [
     '-m', '--cycle',

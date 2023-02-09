@@ -270,6 +270,7 @@ def fzf_reload():
                 elif k in db and not isinstance(db[k], dict):
                     files.append(db[k])
 
+        k = data[-1]
         if files:
             break
         elif k in db:

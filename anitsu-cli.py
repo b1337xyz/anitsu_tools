@@ -129,11 +129,8 @@ def ueberzug_fifo():
             if len(img) == 0:
                 break
 
-            if '404' in img:
-                pv.visibility = ueberzug.Visibility.INVISIBLE
-            else:
-                pv.path = img[-1]
-                pv.visibility = ueberzug.Visibility.VISIBLE
+            pv.path = img[-1]
+            pv.visibility = ueberzug.Visibility.VISIBLE
 
 
 def clean_string(string: str) -> str:
@@ -146,12 +143,11 @@ def preview(key: str, files: list):
         post_id = re.search(r' \(post-(\d+)\)$', key).group(1)
         img = os.path.join(IMG_DIR, f'{post_id}.jpg')
     except AttributeError:
-        img = '404'
+        img = ''
 
-    output = []
+    output = [] if not has_ueberzug else ['\n' * HEIGHT]
     if os.path.exists(img):
         if has_ueberzug:
-            output += ['\n' * HEIGHT]
             with open(UB_FIFO, 'w') as ub_fifo:
                 ub_fifo.write(f'{img}\n')
         elif has_viu:
@@ -160,11 +156,6 @@ def preview(key: str, files: list):
         elif has_chafa:
             output += [sp.run(['chafa', f'--size={WIDTH}x{HEIGHT}', img],
                               stdout=sp.PIPE).stdout.decode()]
-    else:
-        output += ['Preview 404']
-        if has_ueberzug:
-            with open(UB_FIFO, 'w') as ub_fifo:
-                ub_fifo.write('404\n')
 
     total = 0
     files = sorted(files, key=lambda x: isinstance(
@@ -231,6 +222,7 @@ def download(files: list):
 
 def fzf_reload():
     """ Handles fzf reload() """
+
     # This part of the code needs to be here otherwise
     # preview_fifo() won't be able to access changes in `db`
     global db
@@ -317,6 +309,7 @@ def update(args):
         p = sp.run(['python3', script])
         if p.returncode != 0:
             exit(p.returncode)
+        print()
 
     if '-i' in args or '--download-images' in args:
         sp.run(['python3', 'download_images.py'])

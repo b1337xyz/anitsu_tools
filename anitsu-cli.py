@@ -129,8 +129,11 @@ def ueberzug_fifo():
             if len(img) == 0:
                 break
 
-            pv.path = img[-1]
-            pv.visibility = ueberzug.Visibility.VISIBLE
+            if '404' in img:
+                pv.visibility = ueberzug.Visibility.INVISIBLE
+            else:
+                pv.path = img[-1]
+                pv.visibility = ueberzug.Visibility.VISIBLE
 
 
 def clean_string(string: str) -> str:
@@ -143,11 +146,12 @@ def preview(key: str, files: list):
         post_id = re.search(r' \(post-(\d+)\)$', key).group(1)
         img = os.path.join(IMG_DIR, f'{post_id}.jpg')
     except AttributeError:
-        img = ''
+        img = '404'
 
-    output = [] if not has_ueberzug else ['\n' * HEIGHT]
+    output = []
     if os.path.exists(img):
         if has_ueberzug:
+            output += ['\n' * HEIGHT]
             with open(UB_FIFO, 'w') as ub_fifo:
                 ub_fifo.write(f'{img}\n')
         elif has_viu:
@@ -156,6 +160,11 @@ def preview(key: str, files: list):
         elif has_chafa:
             output += [sp.run(['chafa', f'--size={WIDTH}x{HEIGHT}', img],
                               stdout=sp.PIPE).stdout.decode()]
+    else:
+        output += ['Preview 404']
+        if has_ueberzug:
+            with open(UB_FIFO, 'w') as ub_fifo:
+                ub_fifo.write('404\n')
 
     total = 0
     files = sorted(files, key=lambda x: isinstance(

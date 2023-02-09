@@ -124,12 +124,12 @@ def ueberzug_fifo():
         )
         while os.path.exists(UB_FIFO):
             with open(UB_FIFO, 'r') as fifo:
-                img = fifo.read().strip()
+                img = [i for i in fifo.read().split('\n') if i]
 
             if len(img) == 0:
                 break
 
-            pv.path = img
+            pv.path = img[-1]
             pv.visibility = ueberzug.Visibility.VISIBLE
 
 
@@ -145,12 +145,11 @@ def preview(key: str, files: list):
     except AttributeError:
         img = ''
 
-    output = []
+    output = [] if not has_ueberzug else ['\n' * HEIGHT]
     if os.path.exists(img):
         if has_ueberzug:
-            output = ['\n' * 21]
             with open(UB_FIFO, 'w') as ub_fifo:
-                ub_fifo.write(img)
+                ub_fifo.write(f'{img}\n')
         elif has_viu:
             output += [sp.run(['viu', '-w', str(WIDTH), '-h', str(HEIGHT), img],
                               stdout=sp.PIPE).stdout.decode()]
@@ -182,11 +181,13 @@ def preview_fifo():
     """ Preview fifo listener """
     while os.path.exists(PREVIEW_FIFO):
         with open(PREVIEW_FIFO, 'r') as fifo:
-            k = fifo.read()
+            data = [i for i in fifo.read().split('\n') if i]
 
-        if len(k) == 0:
+        if len(data) == 0:
             return
-        elif k == '..':  # show nothing
+
+        k = data[-1]
+        if k == '..':  # show nothing
             open(PREVIEW_FIFO, 'w').write('')
             continue
         elif isinstance(db[k], dict):  # is a directory
@@ -203,6 +204,73 @@ def find_files(data):
     for k in data:
         files += find_files(data[k]) if isinstance(data[k], dict) else [data[k]]
     return files
+
+
+def download(files: list):
+    with open(DL_FILE, 'w') as fp:
+        fp.write('\n'.join(files))
+
+    try:
+        p = sp.run([
+            'aria2c', '--dir', DL_DIR, f'--input-file={DL_FILE}'
+        ] + ARIA2_ARGS)
+        if p.returncode == 0:
+            os.remove(DL_FILE)
+    except KeyboardInterrupt:
+        pass
+
+
+def fzf_reload():
+    """ Handles fzf reload() """
+    # This part of the code needs to be here otherwise
+    # preview_fifo() won't be able to access changes in `db`
+    global db
+
+    old_db = []
+    files = []
+    while os.path.exists(FIFO):
+        with open(FIFO, 'r') as fifo:
+            data = [i for i in fifo.read().split('\n') if i]
+
+        if len(data) == 0:
+            break
+
+        if 'download_folder' in data:
+            for k in data[1:]:
+                files += find_files(db[k])
+            break
+
+        for k in data:
+            if k == '..' and len(data) == 1:
+                if len(old_db) > 0:
+                    db = old_db[-1].copy()
+                    del old_db[-1]
+                break
+            elif k in db and not isinstance(db[k], dict):
+                files.append(db[k])
+
+        if files:
+            break
+        elif k in db:
+            output = [i for i in db[k]]
+            old_db += [db.copy()]
+            db = db[k].copy()
+        else:
+            output = [k for k in db]
+        output += ['..'] if old_db else []
+
+        with open(FIFO, 'w') as fifo:
+            fifo.write('\n'.join(output))
+
+    try:
+        os.remove(FIFO)
+    except FileNotFoundError:
+        pass
+
+    kill_fzf()  # kill fzf and the preview
+
+    if files:
+        download(files)
 
 
 def main():
@@ -230,62 +298,7 @@ def main():
     t.start()
     threads.append(t)
 
-    old_db = []
-    files = []
-    while os.path.exists(FIFO):
-        with open(FIFO, 'r') as fifo:
-            data = fifo.read()
-
-        if len(data) == 0:
-            break
-
-        data = [i for i in data.split('\n') if i]
-        if 'download_folder' in data:
-            for k in data[1:]:
-                files += find_files(db[k])
-            break
-
-        for k in data:
-            if k == '..' and len(data) == 1:
-                if len(old_db) > 0:
-                    db = old_db[-1].copy()
-                    del old_db[-1]
-                break
-            elif k in db and not isinstance(db[k], dict) and k != '..':
-                files.append(db[k])  # ignore .. if selected
-
-        if files:
-            break
-        elif k in db:
-            output = [i for i in db[k]]
-            old_db += [db.copy()]
-            db = db[k].copy()
-        else:
-            output = [k for k in db]
-        output += ['..'] if old_db else []
-
-        with open(FIFO, 'w') as fifo:
-            fifo.write('\n'.join(output))
-
-    try:
-        os.remove(FIFO)
-    except FileNotFoundError:
-        pass
-
-    kill_fzf()  # kill fzf and the preview
-
-    if files:
-        with open(DL_FILE, 'w') as fp:
-            fp.write('\n'.join(files))
-
-        try:
-            p = sp.run([
-                'aria2c', '--dir', DL_DIR, f'--input-file={DL_FILE}'
-            ] + ARIA2_ARGS)
-            if p.returncode == 0:
-                os.remove(DL_FILE)
-        except KeyboardInterrupt:
-            pass
+    fzf_reload()
 
 
 def update(args):

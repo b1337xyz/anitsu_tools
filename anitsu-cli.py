@@ -3,6 +3,7 @@ from utils import *
 from sys import argv, exit
 from threading import Thread
 from shutil import which
+import traceback  # noqa: F401
 import json
 import signal
 import subprocess as sp
@@ -28,9 +29,8 @@ UB_FIFO = f'/tmp/anitsu.ueberzug.{PID}.fifo'
 FZF_PID = f'/tmp/anitsu.{PID}.fzf'
 
 PROMPT = f'{NAME}> '
-HEADER = '''ctrl-d download ctrl-a toggle selection
-ctrl-g bottom   ctrl-t top
-ctrl-h back     ctrl-l foward'''
+HEADER = '''^d download ^a toggle all ^f toggle files only 
+^g bottom   ^t top        ^h back  ^l foward'''
 FZF_ARGS = [
     '-m', '--cycle',
     '--border', 'none',
@@ -41,6 +41,7 @@ FZF_ARGS = [
     '--bind', f"enter:reload(printf '%s\\n' {{+}} > {FIFO} && cat {FIFO})+clear-query",
     '--bind', f"ctrl-h:reload(printf .. > {FIFO} && cat {FIFO})+clear-query",
     '--bind', f"ctrl-l:reload(printf '%s' {{}} > {FIFO} && cat {FIFO})+clear-query",
+    '--bind', f"ctrl-f:reload(printf 'files_only\\n' > {FIFO} && cat {FIFO})",
     '--bind', f"ctrl-d:execute(printf '%s\\n' download_folder {{+}} > {FIFO})",
     '--bind', 'ctrl-a:toggle-all',
     '--bind', 'ctrl-g:first',
@@ -198,12 +199,22 @@ def preview_fifo():
         preview(k, output[:80])
 
 
-def find_files(data):
-    """ Recursively find "files" and return them """
+def find_files(data: dict) -> list:
+    """ Recursively find "files" and return there values """
     files = []
     for k in data:
         files += find_files(data[k]) if isinstance(data[k], dict) else [data[k]]
     return files
+
+
+def files_only(d: dict, out={}) -> dict:
+    """ Recursively find "files" and return them as {key: value, ...} """
+    for k in d:
+        if isinstance(d[k], dict):
+            files_only(d[k], out)
+        else:
+            out[k] = d[k]
+    return out
 
 
 def download(files: list):
@@ -229,6 +240,7 @@ def fzf_reload():
 
     old_db = []
     files = []
+    files_only_on = False
     while os.path.exists(FIFO):
         with open(FIFO, 'r') as fifo:
             data = [i for i in fifo.read().split('\n') if i]
@@ -241,24 +253,34 @@ def fzf_reload():
                 files += find_files(db[k])
             break
 
-        for k in data:
-            if k == '..' and len(data) == 1:
-                if len(old_db) > 0:
-                    db = old_db[-1].copy()
-                    del old_db[-1]
-                break
-            elif k in db and not isinstance(db[k], dict):
-                files.append(db[k])
-
-        if files:
-            break
-        elif k in db:
-            output = [i for i in db[k]]
-            old_db += [db.copy()]
-            db = db[k].copy()
+        if 'files_only' in data:
+            if files_only_on:
+                db = old_db[-1].copy()
+            else:
+                old_db += [db.copy()]
+                db = files_only(db.copy())
+            files_only_on = not files_only_on
+            output = list(db.keys()) + ['..']
         else:
-            output = [k for k in db]
-        output += ['..'] if old_db else []
+            for k in data:
+                if k == '..' and len(data) == 1:
+                    if len(old_db) > 0:
+                        db = old_db[-1].copy()
+                        del old_db[-1]
+                    break
+                elif k in db and not isinstance(db[k], dict):
+                    files.append(db[k])
+
+            if files:
+                break
+            elif k in db:
+                output = [i for i in db[k]]
+                old_db += [db.copy()]
+                db = db[k].copy()
+            else:
+                output = list(db.keys())
+
+            output += ['..'] if old_db else []
 
         with open(FIFO, 'w') as fifo:
             fifo.write('\n'.join(output))

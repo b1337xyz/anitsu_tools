@@ -260,6 +260,7 @@ def fzf_reload():
                 old_db += [db.copy()]
                 db = files_only(db.copy())
             files_only_on = not files_only_on
+            output = list(db.keys())
         else:
             for k in data:
                 if k == '..' and len(data) == 1:
@@ -270,17 +271,16 @@ def fzf_reload():
                 elif k in db and not isinstance(db[k], dict):
                     files.append(db[k])
 
-        k = data[-1]
-        if files:
-            break
-        elif k in db:
-            output = [i for i in db[k]]
-            old_db += [db.copy()]
-            db = db[k].copy()
-        else:
-            output = list(db.keys())
+            if files:
+                break
+            elif k in db:
+                output = [i for i in db[k]]
+                old_db += [db.copy()]
+                db = db[k].copy()
+            else:
+                output = list(db.keys())
+            output += ['..'] if old_db else []
 
-        output += ['..'] if old_db and not files_only_on else []
         with open(FIFO, 'w') as fifo:
             fifo.write('\n'.join(output))
 

@@ -7,7 +7,6 @@ from html import unescape
 from collections import defaultdict
 from xml.dom import minidom
 from shutil import which
-from sys import stderr
 import traceback  # noqa: F401
 import random
 import asyncio
@@ -73,7 +72,7 @@ async def google_drive(key: str, url: str):
     root = tree()
     if '/folders/' in url:
         if not HAS_RCLONE:
-            stderr.write(f'{RED}Install rclone!!\nSkipping {url = }...{END}\n')
+            print(f'{RED}Install rclone!!\nSkipping {url}...{END}\n')
             return
 
         folder_id = RE_GD_FOLDERID.search(url).group(1)
@@ -121,7 +120,7 @@ async def nextcloud(key: str, url: str, password=''):
                 print(f'{RED}{r.status}{END}\n{url}\n{db[key]["url"]}')
                 return
             xml = await r.text()
-    except ClientConnectorError:
+    except ClientConnectorError as err:
         print(f'{RED}{err}{END}\n{content = }\n{url}\n{db[key]["url"]}')
         return
 
@@ -149,8 +148,8 @@ async def nextcloud(key: str, url: str, password=''):
                                    url=f'https://{webdav}') as r:
             content = r.headers['content-disposition']
             size = r.headers['content-length']
-        dl_link = f'https://{user}:{password}@{webdav}/'
         # size = re.search(r'd:getcontentlength>(\d+)<', xml).group(1)
+        dl_link = f'https://{user}:{password}@{webdav}/'
         filename = re.search(r'filename=\"([^\"]*)', content).group(1)
         filename = f'{unquote(filename)} (size-{size})'
         root[filename] = dl_link

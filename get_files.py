@@ -87,14 +87,18 @@ async def google_drive(key: str, url: str):
     else:
         file_id = RE_GD_FILEID.search(url).group(1 if 'id=' in url else 2)
         content = await gd_get_file(file_id)
-        if HAS_GDRIVE:
-            filename = re.search(r'(?:^|\n)Name: ([^\n]*)', content).group(1)
-            size = re.search(r'(?:^|\n)Size: (\d+)', content).group(1)
-        else:
-            filename, size = re.search(
-                r'href\=\"\/open.*?>([^<]+)\<\/a\> \((\d+.)\)', content
-            ).group(1, 2)
-            size = parse_size(size)
+        try:
+            if HAS_GDRIVE:
+                filename = re.search(r'Name: ([^\n]*)', content).group(1)
+                size = re.search(r'Size: (\d+)', content).group(1)
+            else:
+                filename, size = re.search(
+                    r'href\=\"\/open.*?>([^<]+)\<\/a\> \((\d+.)\)', content
+                ).group(1, 2)
+                size = parse_size(size)
+        except AttributeError as err:
+            print(f'{RED}{err}{END}\n{content = }\n{url}\n{db[key]["url"]}')
+            return
 
         dl_link = GD_LINK.format(file_id)
         filename = f'{unescape(filename)} (size-{size})'
@@ -114,15 +118,14 @@ async def nextcloud(key: str, url: str, password=''):
                                    url=f'https://{webdav}',
                                    headers={'Depth': 'infinity'}) as r:
             if r.status not in [200, 207]:
-                print(f'{RED}{key = }, {r.status = }, {url = }{END}')
+                print(f'{RED}{r.status}{END}\n{url}\n{db[key]["url"]}')
                 return
             xml = await r.text()
     except ClientConnectorError:
-        print(f'{RED}Error: {db[key]["url"]}\nhttps://{url}{END}')
+        print(f'{RED}{err}{END}\n{content = }\n{url}\n{db[key]["url"]}')
         return
 
     dom = minidom.parseString(xml)
-
     root = tree()
     for e in dom.getElementsByTagName('d:response'):
         href = e.getElementsByTagName('d:href')

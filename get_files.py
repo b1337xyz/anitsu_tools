@@ -121,7 +121,7 @@ async def nextcloud(key: str, url: str, password=''):
                 return
             xml = await r.text()
     except ClientConnectorError as err:
-        print(f'{RED}{err}{END}\n{content = }\n{url}\n{db[key]["url"]}')
+        print(f'{RED}{err}{END}\n{url}\n{db[key]["url"]}')
         return
 
     dom = minidom.parseString(xml)

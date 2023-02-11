@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from utils import *
+import xmlrpc.client
 from sys import argv, exit
 from threading import Thread
 from shutil import which
@@ -48,6 +49,7 @@ FZF_ARGS = [
     '--bind', 'ctrl-t:last',
 ]
 ARIA2_ARGS = ['-j', '2']
+PORT = 6800
 
 WIDTH = 36  # preview width
 HEIGHT = 24
@@ -219,6 +221,23 @@ def files_only(d: dict) -> dict:
 
 
 def download(files: list):
+    try:
+        session = xmlrpc.client.ServerProxy(f'http://localhost:{PORT}/rpc')
+    except ConnectionRefusedError as err:
+        print(err)
+        session = None
+
+    if session:
+        options = {
+            'dir': DL_DIR,
+            'force-save': 'false',
+            'bt-save-metadata': 'true',
+            'check-integrity': 'true'
+        }
+        for uri in files:
+            session.aria2.addUri([uri], options)
+        return
+
     with open(DL_FILE, 'w') as fp:
         fp.write('\n'.join(files))
 

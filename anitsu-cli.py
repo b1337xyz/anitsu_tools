@@ -221,17 +221,16 @@ def files_only(d: dict) -> dict:
 
 
 def download(files: list):
+    session = xmlrpc.client.ServerProxy(f'http://localhost:{PORT}/rpc')
     try:
-        session = xmlrpc.client.ServerProxy(f'http://localhost:{PORT}/rpc')
+        session.aria2.tellStatus()
     except ConnectionRefusedError as err:
-        print(err)
         session = None
 
     if session:
         options = {
             'dir': DL_DIR,
             'force-save': 'false',
-            'bt-save-metadata': 'true',
             'check-integrity': 'true'
         }
         for uri in files:

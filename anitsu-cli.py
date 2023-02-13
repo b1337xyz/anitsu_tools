@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 from utils import *
-import xmlrpc.client
 from sys import argv, exit
 from threading import Thread
 from shutil import which
-import traceback  # noqa: F401
+import xmlrpc.client
 import json
-import signal
 import subprocess as sp
 import re
 
@@ -27,13 +25,11 @@ DL_FILE = f'/tmp/anitsu.{PID}'
 FIFO = f'/tmp/anitsu.{PID}.fifo'
 PREVIEW_FIFO = f'/tmp/anitsu.preview.{PID}.fifo'
 UB_FIFO = f'/tmp/anitsu.ueberzug.{PID}.fifo'
-FZF_PID = f'/tmp/anitsu.{PID}.fzf'
 
 PROMPT = f'{NAME}> '
-HEADER = '''^d download ^a toggle all ^f toggle files only
-^g bottom   ^t top        ^h back  ^l foward'''
+HEADER = '''^d ^a ^f ^g ^t ^h ^l ^c'''
 FZF_ARGS = [
-    '-m', '--cycle',
+    '-m',
     '--border', 'none',
     '--prompt', PROMPT,
     '--header', HEADER,
@@ -43,16 +39,25 @@ FZF_ARGS = [
     '--bind', f"ctrl-h:reload(printf .. > {FIFO} && cat {FIFO})+clear-query",
     '--bind', f"ctrl-l:reload(printf '%s' {{}} > {FIFO} && cat {FIFO})+clear-query",
     '--bind', f"ctrl-f:reload(printf 'files_only\\n' > {FIFO} && cat {FIFO})",
-    '--bind', f"ctrl-d:execute(printf '%s\\n' download_folder {{+}} > {FIFO})",
+    '--bind', f"ctrl-d:execute(printf '%s\\n' download_folder {{+}} > {FIFO}; cat {FIFO})+clear-selection",
     '--bind', 'ctrl-a:toggle-all',
     '--bind', 'ctrl-g:first',
     '--bind', 'ctrl-t:last',
 ]
-ARIA2_ARGS = ['-j', '2']
-PORT = 6800
-
 WIDTH = 36  # preview width
 HEIGHT = 24
+PORT = 6800  # RPC port
+ARIA2_CONF = {  # RPC config
+    'dir': DL_DIR,
+    'force-save': 'false',
+    'check-integrity': 'true',
+    'max-concurrent-downloads': 2
+}
+ARIA2_ARGS = [
+    '-j', '2',
+    '--dir', DL_DIR,
+    f'--input-file={DL_FILE}'
+]
 
 
 def get_psize(size):
@@ -72,26 +77,11 @@ def fzf(args):
             stdin=sp.PIPE, stdout=sp.PIPE,
             universal_newlines=True
         )
-        open(FZF_PID, 'w').write(str(proc.pid))
         proc.communicate('\n'.join(args))
     except KeyboardInterrupt:
         pass
     finally:
-        cleanup()  # kill the preview
-
-
-def kill_fzf():
-    if not os.path.exists(FZF_PID):
-        return
-
-    try:
-        with open(FZF_PID, 'r') as fp:
-            pid = int(fp.read())
-        os.kill(pid, signal.SIGTERM)
-    except Exception:
-        pass
-    finally:
-        os.remove(FZF_PID)
+        cleanup()
 
 
 def kill_fifo(fifo: str):
@@ -109,7 +99,6 @@ def kill_fifo(fifo: str):
 
 def cleanup():
     """ Make sure that every FIFO dies and temporary files are deleted """
-
     for i in [UB_FIFO, PREVIEW_FIFO, FIFO]:
         t = Thread(target=kill_fifo, args=(i,))
         t.start()
@@ -137,7 +126,7 @@ def ueberzug_fifo():
 
 
 def clean_string(string: str) -> str:
-    return re.sub(r' \((?:size|post)-.*$', '', string)
+    return re.sub(r' \((?:size|post)-.*\)', '', string)
 
 
 def preview(key: str, files: list):
@@ -223,34 +212,24 @@ def files_only(d: dict) -> dict:
 def download(files: list):
     session = xmlrpc.client.ServerProxy(f'http://localhost:{PORT}/rpc')
     try:
-        session.system.listMethods()
-    except ConnectionRefusedError as err:
-        session = None
-
-    if session:
-        options = {
-            'dir': DL_DIR,
-            'force-save': 'false',
-            'check-integrity': 'true'
-        }
         for uri in files:
-            session.aria2.addUri([uri], options)
+            session.aria2.addUri([uri], ARIA2_CONF)
         return
+    except ConnectionRefusedError:
+        pass
 
     with open(DL_FILE, 'w') as fp:
         fp.write('\n'.join(files))
 
     try:
-        p = sp.run([
-            'aria2c', '--dir', DL_DIR, f'--input-file={DL_FILE}'
-        ] + ARIA2_ARGS)
+        p = sp.run(['aria2c'] + ARIA2_ARGS)
         if p.returncode == 0:
             os.remove(DL_FILE)
     except KeyboardInterrupt:
         pass
 
 
-def fzf_reload():
+def fzf_reload(keys: list):
     """ Handles fzf reload() """
 
     # This part of the code needs to be here otherwise
@@ -258,8 +237,8 @@ def fzf_reload():
     global db
 
     old_db = []
-    files = []
     files_only_on = False
+    output = keys
     while os.path.exists(FIFO):
         with open(FIFO, 'r') as fifo:
             data = [i for i in fifo.read().split('\n') if i]
@@ -267,12 +246,12 @@ def fzf_reload():
         if len(data) == 0:
             break
 
+        files = []
         if 'download_folder' in data:
             for k in data[1:]:
                 files += find_files(db[k])
-            break
-
-        if 'files_only' in data:
+            download(files)
+        elif 'files_only' in data:
             if files_only_on:
                 db = old_db[-1].copy()
             else:
@@ -291,27 +270,18 @@ def fzf_reload():
                     files.append(db[k])
 
             if files:
-                break
+                download(files)
             elif k in db:
                 output = [i for i in db[k]]
                 old_db += [db.copy()]
                 db = db[k].copy()
             else:
                 output = list(db.keys())
-            output += ['..'] if old_db else []
+
+            output += ['..'] if old_db and '..' not in output else []
 
         with open(FIFO, 'w') as fifo:
             fifo.write('\n'.join(output))
-
-    try:
-        os.remove(FIFO)
-    except FileNotFoundError:
-        pass
-
-    kill_fzf()  # kill fzf and the preview
-
-    if files:
-        download(files)
 
 
 def main():
@@ -319,8 +289,9 @@ def main():
     with open(FILES_DB, 'r') as fp:
         db = json.load(fp)
 
-    keys = sorted(db, reverse=True,
-                  key=lambda x: int(re.search(r'post-(\d+)', x).group(1)))
+    # keys = sorted(db, reverse=True,
+    #               key=lambda x: int(re.search(r'post-(\d+)', x).group(1)))
+    keys = sorted(db)
 
     for i in [FIFO, PREVIEW_FIFO]:
         os.mkfifo(i)
@@ -339,7 +310,7 @@ def main():
     t.start()
     threads.append(t)
 
-    fzf_reload()
+    fzf_reload(keys)
 
 
 def update(args):

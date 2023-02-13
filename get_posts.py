@@ -32,7 +32,8 @@ def get_auth():
             'passwd': getpass()
         }
         with open(CONFIG, 'w') as fp:
-            json.dump(config, fp, indent=4)
+            json.dump(config, fp, indent=2)
+    print(f'Saved: {CONFIG}')
     return config['user'], config['passwd']
 
 

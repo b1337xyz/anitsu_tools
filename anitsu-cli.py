@@ -223,7 +223,7 @@ def files_only(d: dict) -> dict:
 def download(files: list):
     session = xmlrpc.client.ServerProxy(f'http://localhost:{PORT}/rpc')
     try:
-        session.aria2.tellStatus()
+        session.system.listMethods()
     except ConnectionRefusedError as err:
         session = None
 

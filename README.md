@@ -116,4 +116,5 @@ python3 anitsu-cli.py  # -i or --download-images to download images
 - [ ] Save directory size and total.
 - [x] Add alternatives to ueberzug (anitsu-cli.py).
 - [x] ~~Add alternatives to aria2 (maybe use its rpc?) (anitsu-cli.py).~~
+- [ ] anitsu-cli.py - `async` instead of threads?
 - [ ] ~~Write meaningful commits.~~

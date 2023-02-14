@@ -19,6 +19,16 @@
 
 ## Setup
 
+Arch Linux
+```
+sudo pacman -Syu python python-pip aria2 rclone fzf imagemagick ueberzug --needed
+```
+
+Debian
+```
+sudo apt install python3 python3-pip aria2 rclone fzf imagemagick ueberzug -y
+```
+
 <details>
     <summary>Make a remote called Anitsu</summary>
 

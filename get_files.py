@@ -22,6 +22,11 @@ HAS_RCLONE = which('rclone')
 GD_LINK = 'https://drive.google.com/uc?id={}&export=download&confirm=t'
 counter = 1
 
+if HAS_RCLONE:
+    if os.system('rclone listremotes 2>/dev/null | grep -q ^Anitsu:') == 0:
+        print('rclone is installed but remote "Anitsu" does not exist.')
+        HAS_RCLONE = False
+
 
 def tree():
     return defaultdict(tree)
@@ -72,7 +77,7 @@ async def google_drive(key: str, url: str):
     root = tree()
     if '/folders/' in url:
         if not HAS_RCLONE:
-            print(f'{RED}Install rclone!!\nSkipping {url}...{END}\n')
+            print(f'Skipping {url}...\n')
             return
 
         folder_id = RE_GD_FOLDERID.search(url).group(1)

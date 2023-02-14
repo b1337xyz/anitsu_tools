@@ -32,6 +32,8 @@ sudo apt install python3 python3-pip aria2 rclone fzf imagemagick ueberzug -y
 <details>
     <summary>Make a remote called Anitsu</summary>
 
+Recommended: [Making your own client_id](https://rclone.org/drive/#making-your-own-client-id)
+
 ```
 rclone config
 ```
@@ -105,7 +107,6 @@ d) Delete this remote
 y/e/d> y
 ```
 
-Recommended: [Making your own client_id](https://rclone.org/drive/#making-your-own-client-id)
 </details>
 
 > Make sure you have `imagemagick` and `rclone` installed

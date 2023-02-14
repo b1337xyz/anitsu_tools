@@ -77,7 +77,7 @@ async def google_drive(key: str, url: str):
     root = tree()
     if '/folders/' in url:
         if not HAS_RCLONE:
-            print(f'Skipping {url}...\n')
+            print(f'Skipping {url}...')
             return
 
         folder_id = RE_GD_FOLDERID.search(url).group(1)

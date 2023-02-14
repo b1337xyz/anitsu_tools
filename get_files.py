@@ -23,7 +23,7 @@ GD_LINK = 'https://drive.google.com/uc?id={}&export=download&confirm=t'
 counter = 1
 
 if HAS_RCLONE:
-    if os.system('rclone listremotes 2>/dev/null | grep -q ^Anitsu:') == 0:
+    if os.system('rclone listremotes 2>/dev/null | grep -q ^Anitsu:') != 0:
         print('rclone is installed but remote "Anitsu" does not exist.')
         HAS_RCLONE = False
 

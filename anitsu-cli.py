@@ -6,7 +6,6 @@ from shutil import which
 import xmlrpc.client
 import json
 import subprocess as sp
-import re
 
 has_ueberzug = False
 try:
@@ -30,6 +29,7 @@ PROMPT = f'{NAME}> '
 HEADER = '''^d ^a ^f ^g ^t ^h ^l ^c'''
 FZF_ARGS = [
     '-m',
+    '--delimiter=:', '--with-nth=3..',
     '--border', 'none',
     '--prompt', PROMPT,
     '--header', HEADER,
@@ -43,6 +43,8 @@ FZF_ARGS = [
     '--bind', 'ctrl-a:toggle-all',
     '--bind', 'ctrl-g:first',
     '--bind', 'ctrl-t:last',
+    '--bind', 'end:preview-bottom',
+    '--bind', 'home:preview-top'
 ]
 WIDTH = 36  # preview width
 HEIGHT = 24
@@ -60,7 +62,7 @@ ARIA2_ARGS = [
 ]
 
 
-def get_psize(size):
+def get_psize(size: int):
     psize = f"{size} B"
     for i in 'BMG':
         if size < 1000:
@@ -125,45 +127,40 @@ def ueberzug_fifo():
             pv.visibility = ueberzug.Visibility.VISIBLE
 
 
-def clean_string(string: str) -> str:
-    return re.sub(r' \((?:size|post)-.*\)', '', string)
-
-
 def preview(key: str, files: list):
     """ List files and send to fzf preview and the post image to ueberzug """
-    try:
-        post_id = re.search(r' \(post-(\d+)\)$', key).group(1)
-        img = os.path.join(IMG_DIR, f'{post_id}.jpg')
-    except AttributeError:
-        img = ''
-
+    post_id, size = key.split(':')[:2]
+    img = os.path.join(IMG_DIR, f'{post_id}.jpg')
     output = [] if not has_ueberzug else ['\n' * HEIGHT]
     if os.path.exists(img):
         if has_ueberzug:
             with open(UB_FIFO, 'w') as ub_fifo:
                 ub_fifo.write(f'{img}\n')
         elif has_viu:
-            output += [sp.run(['viu', '-w', str(WIDTH), '-h', str(HEIGHT), img],
-                              stdout=sp.PIPE).stdout.decode()]
+            output += [sp.run([
+                'viu', '-w', str(WIDTH), '-h', str(HEIGHT), img
+            ], stdout=sp.PIPE).stdout.decode()]
         elif has_chafa:
             output += [sp.run(['chafa', f'--size={WIDTH}x{HEIGHT}', img],
                               stdout=sp.PIPE).stdout.decode()]
 
+    files = sorted(files,
+                   key=lambda x: int(x.split(':')[1]) > 0)  # dirs first
     total = 0
-    files = sorted(files, key=lambda x: isinstance(
-        re.match(r'.*\(size-\d+\)', x), re.Match
-    ))  # directories first
     for i, v in enumerate(files):
-        try:
-            size = int(re.search(r' \(size-(\d+)\)$', v).group(1))
-            total += size
-            s = f'{get_psize(size)} {MAG}{clean_string(v)}{END}'
-        except AttributeError:  # is a directory
-            s = f'{BLU}{clean_string(v)}{END}'
-        files[i] = s
+        filename = ':'.join(v.split(':')[2:])
+        _, size = v.split(':')[:2]
+        size = int(size)
+        total += size
+        if size > 0:
+            psize = get_psize(size)
+            files[i] = f'{psize} {MAG}{filename}{END}'
+        else:
+            files[i] = f'{BLU}{filename}{END}'
 
     if total > 0:
-        output += [f'Total size: {get_psize(total).strip()}']
+        psize = get_psize(total).strip()
+        output += [f'Total size: {psize}']
 
     with open(PREVIEW_FIFO, 'w') as fifo:
         fifo.write('\n'.join(output + files))
@@ -179,8 +176,8 @@ def preview_fifo():
             return
 
         k = data[-1]
-        if k == '..':  # show nothing
-            open(PREVIEW_FIFO, 'w').write('')
+        if k == '::..':  # show nothing
+            open(PREVIEW_FIFO, 'w').write('go back')
             continue
         elif isinstance(db[k], dict):  # is a directory
             output = [i for i in db[k]]
@@ -236,6 +233,7 @@ def fzf_reload(keys: list):
     # preview_fifo() won't be able to access changes in `db`
     global db
 
+    back = '::..'
     old_db = []
     files_only_on = False
     output = keys
@@ -261,7 +259,7 @@ def fzf_reload(keys: list):
             output = list(db.keys())
         else:
             for k in data:
-                if k == '..' and len(data) == 1:
+                if k == back and len(data) == 1:
                     if len(old_db) > 0:
                         db = old_db[-1].copy()
                         del old_db[-1]
@@ -278,7 +276,7 @@ def fzf_reload(keys: list):
             else:
                 output = list(db.keys())
 
-            output += ['..'] if old_db and '..' not in output else []
+            output += [back] if old_db and back not in output else []
 
         with open(FIFO, 'w') as fifo:
             fifo.write('\n'.join(output))
@@ -288,9 +286,6 @@ def main():
     global db, threads
     with open(FILES_DB, 'r') as fp:
         db = json.load(fp)
-
-    # keys = sorted(db, reverse=True,
-    #               key=lambda x: int(re.search(r'post-(\d+)', x).group(1)))
     keys = sorted(db)
 
     for i in [FIFO, PREVIEW_FIFO]:

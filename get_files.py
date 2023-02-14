@@ -32,9 +32,9 @@ def tree():
     return defaultdict(tree)
 
 
-def set_value(root, path, value):
+def set_value(root, path, value, key):
     for d in path[:-1]:
-        root = root[unquote(d).strip()]
+        root = root[f'{key}:0:{unquote(d).strip()}']
     root[path[-1]] = value
 
 
@@ -86,8 +86,8 @@ async def google_drive(key: str, url: str):
             size = file['Size']
             dl_link = GD_LINK.format(file["ID"])
             path = file['Path'].split('/')
-            path[-1] = f'{path[-1]} (size-{size})'
-            set_value(root, path, dl_link)
+            path[-1] = f'{key}:{size}:{path[-1]}'
+            set_value(root, path, dl_link, key)
     else:
         file_id = RE_GD_FILEID.search(url).group(1 if 'id=' in url else 2)
         content = await gd_get_file(file_id)
@@ -105,7 +105,7 @@ async def google_drive(key: str, url: str):
             return
 
         dl_link = GD_LINK.format(file_id)
-        filename = f'{unescape(filename)} (size-{size})'
+        filename = f'{key}:{size}:{unescape(filename)}'
         root[filename] = dl_link
 
     # print(json.dumps(root, indent=2))
@@ -145,8 +145,8 @@ async def nextcloud(key: str, url: str, password=''):
 
         dl_link = f'https://{user}:{password}@{webdav}/{path}'
         path = path.split('/')
-        path[-1] = unquote(f'{path[-1]} (size-{size})')
-        set_value(root, path, dl_link)
+        path[-1] = f'{key}:{size}:{unquote(path[-1])}'
+        set_value(root, path, dl_link, key)
 
     if not root and 'contenttype>video/' in xml:
         async with session.request(method='HEAD', auth=auth,
@@ -156,7 +156,7 @@ async def nextcloud(key: str, url: str, password=''):
         # size = re.search(r'd:getcontentlength>(\d+)<', xml).group(1)
         dl_link = f'https://{user}:{password}@{webdav}/'
         filename = re.search(r'filename=\"([^\"]*)', content).group(1)
-        filename = f'{unquote(filename)} (size-{size})'
+        filename = f'{key}:{size}:{unquote(filename)}'
         root[filename] = dl_link
 
     # print(json.dumps(root, indent=2))
@@ -184,7 +184,7 @@ def gen_only_files(db: dict):
     files = dict()
     for k, v in db.items():
         title = db[k]['title']
-        s = f'{title} (post-{k})'
+        s = f'{k}:0:{title}'
         files[s] = dict()
         for v2 in v['nextcloud'].values():
             files[s].update(v2)

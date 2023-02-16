@@ -85,7 +85,7 @@ async def google_drive(key: str, url: str):
         for file in data:
             size = file['Size']
             dl_link = GD_LINK.format(file["ID"])
-            path = file['Path'].split('/')
+            path = ['gdrive'] + file['Path'].split('/')
             path[-1] = f'{key}:{size}:{path[-1]}'
             set_value(root, path, dl_link, key)
     else:

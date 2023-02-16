@@ -36,7 +36,7 @@ FZF_ARGS = [
     '--preview-window', 'left:52%:border-none',
     '--preview', f"printf '%s' {{}} > {PREVIEW_FIFO} && cat {PREVIEW_FIFO}",
     '--bind', f"enter:reload(printf '%s\\n' {{+}} > {FIFO} && cat {FIFO})+clear-query",
-    '--bind', f"ctrl-h:reload(printf .. > {FIFO} && cat {FIFO})+clear-query",
+    '--bind', f"ctrl-h:reload(printf ::.. > {FIFO} && cat {FIFO})+clear-query",
     '--bind', f"ctrl-l:reload(printf '%s' {{}} > {FIFO} && cat {FIFO})+clear-query",
     '--bind', f"ctrl-f:reload(printf 'files_only\\n' > {FIFO} && cat {FIFO})",
     '--bind', f"ctrl-d:execute(printf '%s\\n' download_folder {{+}} > {FIFO}; cat {FIFO})+clear-selection",
@@ -187,8 +187,11 @@ def preview_fifo():
         preview(k, output[:80])
 
 
-def find_files(data: dict) -> list:
+def find_files(data) -> list:
     """ Recursively find "files" and return there values """
+    if isinstance(data, str):
+        return [data]
+
     files = []
     for k in data:
         files += find_files(data[k]) if isinstance(data[k], dict) else [data[k]]

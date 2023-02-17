@@ -4,6 +4,7 @@ from sys import argv, exit
 from threading import Thread
 from shutil import which
 import xmlrpc.client
+import signal
 import json
 import subprocess as sp
 
@@ -20,6 +21,7 @@ has_chafa = which('chafa')
 PID = os.getpid()
 SCRIPT = os.path.realpath(__file__)
 NAME = SCRIPT.split('/')[-1]
+FZF_PID = f'/tmp/anitsu.fzf.{PID}'
 DL_FILE = f'/tmp/anitsu.{PID}'
 FIFO = f'/tmp/anitsu.{PID}.fifo'
 PREVIEW_FIFO = f'/tmp/anitsu.preview.{PID}.fifo'
@@ -79,11 +81,25 @@ def fzf(args):
             stdin=sp.PIPE, stdout=sp.PIPE,
             universal_newlines=True
         )
+        open(FZF_PID, 'w').write(str(proc.pid))
         proc.communicate('\n'.join(args))
     except KeyboardInterrupt:
         pass
     finally:
+        os.remove(FZF_PID)
         cleanup()
+
+
+def kill_fzf():
+    if not os.path.exists(FZF_PID):
+        return
+
+    try:
+        with open(FZF_PID, 'r') as f:
+            pid = int(f.read())
+        os.kill(pid, signal.SIGTERM)
+    except Exception:
+        pass
 
 
 def kill_fifo(fifo: str):
@@ -218,6 +234,9 @@ def download(files: list):
     except ConnectionRefusedError:
         pass
 
+    os.remove(FIFO)
+    kill_fzf()
+
     with open(DL_FILE, 'w') as fp:
         fp.write('\n'.join(files))
 
@@ -280,6 +299,9 @@ def fzf_reload(keys: list):
                 output = list(db.keys())
 
             output += [back] if old_db and back not in output else []
+
+        if not os.path.exists(FIFO):
+            break
 
         with open(FIFO, 'w') as fifo:
             fifo.write('\n'.join(output))

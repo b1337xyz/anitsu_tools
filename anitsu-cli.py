@@ -160,9 +160,9 @@ def preview(key: str, files: list):
             output += [sp.run(['chafa', f'--size={WIDTH}x{HEIGHT}', img],
                               stdout=sp.PIPE).stdout.decode()]
 
+    total = 0
     files = sorted(files,
                    key=lambda x: int(x.split(':')[1]) > 0)  # dirs first
-    total = 0
     for i, v in enumerate(files):
         filename = ':'.join(v.split(':')[2:])
         _, size = v.split(':')[:2]
@@ -251,8 +251,7 @@ def download(files: list):
 def fzf_reload(keys: list):
     """ Handles fzf reload() """
 
-    # This part of the code needs to be here otherwise
-    # preview_fifo() won't be able to access changes in `db`
+    # preview_fifo() needs to access changes in `db`
     global db
 
     back = '::..'
@@ -276,9 +275,9 @@ def fzf_reload(keys: list):
                 db = old_db[-1].copy()
             else:
                 old_db += [db.copy()]
-                db = files_only(db.copy())
+                db = files_only(db)
             files_only_on = not files_only_on
-            output = list(db.keys())
+            output = list(db)
         else:
             for k in data:
                 if k == back and len(data) == 1:
@@ -296,7 +295,7 @@ def fzf_reload(keys: list):
                 old_db += [db.copy()]
                 db = db[k].copy()
             else:
-                output = list(db.keys())
+                output = list(db)
 
             output += [back] if old_db and back not in output else []
 

@@ -208,10 +208,10 @@ async def main():
     async with ClientSession() as session:
         for k, v in db.items():
             for url in v['nextcloud']:
-                if not v['nextcloud'][url] or db[k]['is_release']:
+                if not v['nextcloud'][url] or v['is_release']:
                     queue.put_nowait((k, url))
             for url in v['gdrive']:
-                if not v['gdrive'][url] or db[k]['is_release']:
+                if not v['gdrive'][url] or v['is_release']:
                     queue.put_nowait((k, url))
 
         qsize = queue.qsize()

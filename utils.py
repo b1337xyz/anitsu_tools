@@ -24,7 +24,8 @@ for dir in [DB_PATH, IMG_DIR]:
 def pbar(curr: int, total: int):
     p = curr * 100 // total
     block = p * BAR_SIZE // 100
-    # blank = BAR_SIZE - block
-    # print('[{}{}] {:3}%'.format(block * '#', ' ' * blank, p), end='\r')
-    print('{} {:3}%'.format(block * '.', p),
+    blank = BAR_SIZE - block
+    print('[{}{}] {:3}%'.format(block * '#', '-' * blank, p),
           end='\r' if curr <= total else '\n')
+    # print('{} {:3}%'.format(block * '.', p),
+    #       end='\r' if curr <= total else '\n')

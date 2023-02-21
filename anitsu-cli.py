@@ -234,11 +234,16 @@ def download(files: list):
     except ConnectionRefusedError:
         pass
 
+    # TODO: stop fzf and resume instead
     os.remove(FIFO)
     kill_fzf()
 
     with open(DL_FILE, 'w') as fp:
         fp.write('\n'.join(files))
+
+    # pid = int(open(FZF_PID, 'r').read())
+    # os.kill(pid, signal.SIGTSTP)
+    # os.system('clear')
 
     try:
         p = sp.run(['aria2c'] + ARIA2_ARGS)
@@ -246,6 +251,8 @@ def download(files: list):
             os.remove(DL_FILE)
     except KeyboardInterrupt:
         pass
+    # finally:
+    #     os.kill(pid, signal.SIGCONT)
 
 
 def fzf_reload(keys: list):

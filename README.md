@@ -1,4 +1,5 @@
-# anitsu_tools [PT-BR](./README.por.md)
+# anitsu_tools
+### [PT-BR](./README.por.md)
 [![test](https://github.com/b1337xyz/anitsu_tools/actions/workflows/flake8.yml/badge.svg)](https://github.com/b1337xyz/anitsu_tools/actions/workflows/flake8.yml)
 
 ## Dependencies

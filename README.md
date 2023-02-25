@@ -1,21 +1,22 @@
 # anitsu_tools
 [![test](https://github.com/b1337xyz/anitsu_tools/actions/workflows/flake8.yml/badge.svg)](https://github.com/b1337xyz/anitsu_tools/actions/workflows/flake8.yml)
+[PT-BR](./README.por.md)
 
 ## Dependencies
 
 - python
     - [requests](https://requests.readthedocs.io/en/latest/)
     - [aiohttp](https://github.com/aio-libs/aiohttp)
-    - [aiofiles](https://github.com/Tinche/aiofiles) - `download_images.py`
-    - [ueberzug](https://github.com/b1337xyz/ueberzug) (optional) - `anitsu-cli.py` image preview
+    - [aiofiles](https://github.com/Tinche/aiofiles)
+    - [ueberzug](https://github.com/b1337xyz/ueberzug) (optional) - image preview
 - programs
     - [aria2](https://aria2.github.io/) - download utility
     - [fzf](https://github.com/junegunn/fzf) - `anitsu-cli.py`
-    - [imagemagick](https://github.com/ImageMagick/ImageMagick) - converts images to jpeg in `download_images.py`
-    - [rclone](https://rclone.org) - get files from google drive folders (`get_files.py`)
-    - [gdrive](https://github.com/prasmussen/gdrive) (optional) - for more accurate results from google drive links (`get_files.py`)
-    - [viu](https://github.com/atanunq/viu#from-source-recommended) (optional) - image preview
-    - [chafa](https://hpjansson.org/chafa/) (optional) - image preview
+    - [imagemagick](https://github.com/ImageMagick/ImageMagick) - resize and converts images to jpeg
+    - [rclone](https://rclone.org) - get files from google drive folders
+    - [gdrive](https://github.com/prasmussen/gdrive) (optional) - for more accurate results from google drive links
+    - [viu](https://github.com/atanunq/viu#from-source-recommended) (optional) - terminal image preview
+    - [chafa](https://hpjansson.org/chafa/) (optional) - same as `viu`
 
 ## Setup
 

@@ -28,15 +28,17 @@ PREVIEW_FIFO = f'/tmp/anitsu.preview.{PID}.fifo'
 UB_FIFO = f'/tmp/anitsu.ueberzug.{PID}.fifo'
 
 PROMPT = ''
-LABEL = '| ctrl-d ctrl-a ctrl-f ctrl-g ctrl-t ctrl-h ctrl-l ctrl-c |'
+LABEL = '╢ ctrl-d ctrl-a ctrl-f ctrl-g ctrl-t ctrl-h ctrl-l ctrl-c ╟'
 FZF_ARGS = [
     '-m',
+    '--no-hscroll',
     '--delimiter=:', '--with-nth=3..',
     '--border', 'bottom',
     '--border-label', LABEL,
     '--padding', '0,0,2%',
     '--prompt', PROMPT,
-    '--preview-window', 'left:52%:border-none',
+    '--preview-window', 'left:52%:border-sharp',
+    '--no-scrollbar',
     '--preview', f"printf '%s' {{}} > {PREVIEW_FIFO} && cat {PREVIEW_FIFO}",
     '--bind', f"enter:reload(printf '%s\\n' {{+}} > {FIFO} && cat {FIFO})+clear-query",
     '--bind', f"ctrl-h:reload(printf ::.. > {FIFO} && cat {FIFO})+clear-query",

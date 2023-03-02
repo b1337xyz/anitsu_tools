@@ -27,14 +27,15 @@ FIFO = f'/tmp/anitsu.{PID}.fifo'
 PREVIEW_FIFO = f'/tmp/anitsu.preview.{PID}.fifo'
 UB_FIFO = f'/tmp/anitsu.ueberzug.{PID}.fifo'
 
-PROMPT = f'{NAME}> '
-HEADER = '''^d ^a ^f ^g ^t ^h ^l ^c'''
+PROMPT = ''
+LABEL = '| ctrl-d ctrl-a ctrl-f ctrl-g ctrl-t ctrl-h ctrl-l ctrl-c |'
 FZF_ARGS = [
     '-m',
     '--delimiter=:', '--with-nth=3..',
-    '--border', 'none',
+    '--border', 'bottom',
+    '--border-label', LABEL,
+    '--padding', '0,0,2%',
     '--prompt', PROMPT,
-    '--header', HEADER,
     '--preview-window', 'left:52%:border-none',
     '--preview', f"printf '%s' {{}} > {PREVIEW_FIFO} && cat {PREVIEW_FIFO}",
     '--bind', f"enter:reload(printf '%s\\n' {{+}} > {FIFO} && cat {FIFO})+clear-query",

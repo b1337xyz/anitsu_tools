@@ -26,6 +26,6 @@ def pbar(curr: int, total: int):
     block = p * BAR_SIZE // 100
     blank = BAR_SIZE - block
     print('[{}{}] {:3}%'.format(block * '#', '-' * blank, p),
-          end='\r' if curr <= total else '\n')
+          end='\r' if curr < total else '\n')
     # print('{} {:3}%'.format(block * '.', p),
     #       end='\r' if curr <= total else '\n')

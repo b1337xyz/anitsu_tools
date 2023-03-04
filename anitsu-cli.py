@@ -51,8 +51,8 @@ FZF_ARGS = [
     '--bind', 'end:preview-bottom',
     '--bind', 'home:preview-top'
 ]
-WIDTH = 36  # preview width
-HEIGHT = 24
+WIDTH = 30  # preview width
+HEIGHT = 18
 PORT = 6800  # RPC port
 ARIA2_CONF = {  # RPC config
     'dir': DL_DIR,
@@ -68,7 +68,7 @@ ARIA2_ARGS = [
 
 
 def get_psize(size: int):
-    psize = f"{size} B"
+    psize = f"{size:8.2f} B"
     for i in 'BMG':
         if size < 1000:
             break
@@ -163,9 +163,9 @@ def preview(key: str, files: list):
             output += [sp.run(['chafa', f'--size={WIDTH}x{HEIGHT}', img],
                               stdout=sp.PIPE).stdout.decode()]
 
+    files = sorted(files, key=lambda x: ''.join(x.split(':')[2:]))
+    files = sorted(files, key=lambda x: int(x.split(':')[1]) > 0)  # dir first
     total = 0
-    files = sorted(files,
-                   key=lambda x: int(x.split(':')[1]) > 0)  # dirs first
     for i, v in enumerate(files):
         filename = ':'.join(v.split(':')[2:])
         _, size = v.split(':')[:2]

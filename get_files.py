@@ -204,6 +204,7 @@ async def main():
     with open(DB, 'r') as fp:
         db = json.load(fp)
 
+
     queue = asyncio.Queue()
     async with ClientSession() as session:
         for k, v in db.items():
@@ -232,6 +233,11 @@ async def main():
 
 
 if __name__ == '__main__':
+    url = 'https://kumo.anitsu.moe/'
+    if not __import__("requests").head(url).status_code in [200, 207]:
+        print('Anitsu is offline')
+        exit(1)
+
     try:
         asyncio.run(main())
     except KeyboardInterrupt:

@@ -60,6 +60,7 @@ async def update_db(posts):
         content = post['content']['rendered']
         title = clean_text(post['title']['rendered'])
 
+
         if post_id not in db:
             print(f'[{GRN}{modified}{END}] {title}')
             db[post_id] = dict()
@@ -101,6 +102,10 @@ async def update_db(posts):
             if i not in db[post_id]['gdrive']:
                 db[post_id]['gdrive'][i] = dict()
 
+        if '_paywall' in content and not has_files:
+            print('Eu adoro como a anitsu foi de uma ideia até que legal para merda bem rápido. Staff ficou cega com dinheiro e agora só quer ganhar dinheiro com o que é de graça. É triste como o interesse fode projetos legais.')
+            return
+
         if not has_files:
             # https://anitsu.moe/wp-json/wp/v2/posts?include={post_id}
             print(f'nothing found, post {post_id} deleted')
@@ -112,7 +117,9 @@ async def get_posts(queue):
         url = await queue.get()
         async with session.get(url) as r:
             posts = await r.json()
-        await update_db(posts)
+        out = await update_db(posts)
+        if out:
+            break
         await random_sleep()
         queue.task_done()
 
@@ -171,11 +178,6 @@ async def main():
 
 
 if __name__ == '__main__':
-    url = 'https://kumo.anitsu.moe/'
-    if not __import__("requests").head(url).status_code in [200, 207]:
-        print('Anitsu is offline')
-        exit(1)
-
     try:
         asyncio.run(main())
     except KeyboardInterrupt:

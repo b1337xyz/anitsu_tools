@@ -1,6 +1,7 @@
 # anitsu_tools
-### [PT-BR](./README.por.md)
 [![test](https://github.com/b1337xyz/anitsu_tools/actions/workflows/flake8.yml/badge.svg)](https://github.com/b1337xyz/anitsu_tools/actions/workflows/flake8.yml)
+
+> Eu adoro como a anitsu foi de uma ideia até que legal para merda bem rápido. Staff ficou cega com dinheiro e agora só quer ganhar dinheiro com o que é de graça. É triste como o interesse fode projetos legais.
 
 ## Dependencies
 
